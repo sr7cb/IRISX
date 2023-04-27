@@ -1,5 +1,6 @@
 # Prerequisites
 *.d
+*.gap_history
 
 # Compiled Object files
 *.slo
