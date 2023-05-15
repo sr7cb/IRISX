@@ -10,7 +10,8 @@
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
-#include "fftx3.hpp"
+#include <map>
+// #include "fftx3.hpp"
 #include <array>
 #include <cstdio>
 #include <cassert>
@@ -25,24 +26,25 @@
 #include <string>
 #include <array>
 #include <chrono>
-#if defined FFTX_CUDA
-#include "cudabackend.hpp"
-#elif defined FFTX_HIP
-#include "hipbackend.hpp"
-#else
-#include "cpubackend.hpp"
-#endif
-#if defined (FFTX_CUDA) || defined(FFTX_HIP)
-#include "fftx_mddft_gpu_public.h"
-#include "fftx_imddft_gpu_public.h"
-#include "fftx_mdprdft_gpu_public.h"
-#include "fftx_imdprdft_gpu_public.h"
-#else
-#include "fftx_mddft_cpu_public.h"
-#include "fftx_imddft_cpu_public.h"
-#include "fftx_mdprdft_cpu_public.h"
-#include "fftx_imdprdft_cpu_public.h"
-#endif
+// #if defined FFTX_CUDA
+// #include "cudabackend.hpp"
+
+// #elif defined FFTX_HIP
+// #include "hipbackend.hpp"
+// #endif
+#include "irisbackend.hpp"
+
+// #if defined (FFTX_CUDA) || defined(FFTX_HIP)
+// #include "fftx_mddft_gpu_public.h"
+// #include "fftx_imddft_gpu_public.h"
+// #include "fftx_mdprdft_gpu_public.h"
+// #include "fftx_imdprdft_gpu_public.h"
+// #else
+// #include "fftx_mddft_cpu_public.h"
+// #include "fftx_imddft_cpu_public.h"
+// #include "fftx_mdprdft_cpu_public.h"
+// #include "fftx_imdprdft_cpu_public.h"
+// #endif
 #pragma once
 
 #if defined ( PRINTDEBUG )
@@ -93,23 +95,34 @@ void restore_input(int saved_fd)
     close(saved_fd);
 }
 
-transformTuple_t * getLibTransform(std::string name, std::vector<int> sizes) {
-    if(name == "mddft") {
-        return fftx_mddft_Tuple(fftx::point_t<3>({{sizes.at(0), sizes.at(1), sizes.at(2)}}));
+// transformTuple_t * getLibTransform(std::string name, std::vector<int> sizes) {
+//     if(name == "mddft") {
+//         return fftx_mddft_Tuple(fftx::point_t<3>({{sizes.at(0), sizes.at(1), sizes.at(2)}}));
+//     }
+//     else if(name == "imddft") {
+//         return fftx_imddft_Tuple(fftx::point_t<3>({{sizes.at(0), sizes.at(1), sizes.at(2)}}));
+//     }
+//     else if(name == "mdprdft") {
+//         return fftx_mdprdft_Tuple(fftx::point_t<3>({{sizes.at(0), sizes.at(1), sizes.at(2)}}));
+//     }
+//     else if(name == "imdprdft") {
+//         return fftx_imdprdft_Tuple(fftx::point_t<3>({{sizes.at(0), sizes.at(1), sizes.at(2)}}));
+//     }
+//     else {
+//         std::cout << "non-supported fixed library transform" << std::endl; 
+//         return nullptr;
+//     }
+// }
+
+std::string getIRISARCH() {
+    const char * tmp2 = std::getenv("IRIS_ARCHS");
+    std::string tmp(tmp2 ? tmp2 : "");
+    std::cout << tmp << std::endl;
+    if (tmp.empty()) {
+        std::cout << "[ERROR] No such variable found, please set IRIS_ARCHS env variable" << std::endl;
+        exit(-1);
     }
-    else if(name == "imddft") {
-        return fftx_imddft_Tuple(fftx::point_t<3>({{sizes.at(0), sizes.at(1), sizes.at(2)}}));
-    }
-    else if(name == "mdprdft") {
-        return fftx_mdprdft_Tuple(fftx::point_t<3>({{sizes.at(0), sizes.at(1), sizes.at(2)}}));
-    }
-    else if(name == "imdprdft") {
-        return fftx_imdprdft_Tuple(fftx::point_t<3>({{sizes.at(0), sizes.at(1), sizes.at(2)}}));
-    }
-    else {
-        std::cout << "non-supported fixed library transform" << std::endl; 
-        return nullptr;
-    }
+    return tmp;
 }
 
 std::string getFFTX() {
@@ -134,6 +147,16 @@ std::string getSPIRAL() {
     return tmp;
 }
 
+void getImportAndConfIRIS(std::string arch) {
+    std::cout << "Load(fftx);\nImportAll(fftx);" << std::endl;
+    if(arch == "cuda")
+        std::cout << "conf := LocalConfig.fftx.confGPU();" << std::endl;
+    else if(arch == "hip")
+        std::cout << "conf := FFTXGlobals.defaultHIPConf();\n";
+    else
+        std::cout << "conf := LocalConfig.fftx.defaultConf();\n";
+}
+
 void getImportAndConf() {
     std::cout << "Load(fftx);\nImportAll(fftx);\n";
     #if (defined FFTX_HIP || FFTX_CUDA)
@@ -146,6 +169,18 @@ void getImportAndConf() {
     #else
     std::cout << "conf := LocalConfig.fftx.defaultConf();\n";
     #endif
+}
+
+
+void printIRISBackend(std::string name, std::vector<int> sizes, std::string arch) {
+    std::cout << "if 1 = 1 then opts:=conf.getOpts(transform);\ntt:= opts.tagIt(transform);\nif(IsBound(fftx_includes)) then opts.includes:=fftx_includes;fi;\nc:=opts.fftxGen(tt);\n fi;" << std::endl;
+    std::cout << "GASMAN(\"collect\");" << std::endl;
+    if(arch == "cuda")
+        std::cout << "PrintTo(\"kernel.cu\", opts.prettyPrint(c));" << std::endl;
+    else if(arch == "hip")
+        std::cout << "PrintTo(\"kernel.hip.cpp\", opts.prettyPrint(c));" << std::endl;
+    else
+        std::cout << "PrintTo(\"kernel.openmp.c\", opts.prettyPrint(c));" << std::endl;
 }
 
 void printJITBackend(std::string name, std::vector<int> sizes) {
@@ -235,9 +270,9 @@ std::string FFTXProblem::semantics2() {
         std::cout << "pipe failed\n";
     std::stringstream out; 
     std::streambuf *coutbuf = std::cout.rdbuf(out.rdbuf()); //save old buf
-    getImportAndConf();
+    getImportAndConfIRIS("cuda");
     semantics();
-    printJITBackend(name, sizes);
+    printIRISBackend(name, sizes, "cuda");
     std::cout.rdbuf(coutbuf);
     std::string script = out.str();
     int res = write(p[1], script.c_str(), script.size());
@@ -246,67 +281,61 @@ std::string FFTXProblem::semantics2() {
     std::string result = exec(tmp.c_str());
     restore_input(save_stdin);
     close(p[0]);
-    result.erase(result.size()-8);
-    return result;
-    // return nullptr;
+    // result.erase(result.size()-8);
+    // return result;
+    return "cuda";
 }
 
 
 void FFTXProblem::transform(){
 
-    transformTuple_t *tupl = getLibTransform(name, sizes);
-    if(tupl != nullptr) { //check if fixed library has transform
-        if ( DEBUGOUT) std::cout << "found size in fixed library\n";
-        ( * tupl->initfp )();
-        #if defined (FFTX_CUDA) ||  (FFTX_HIP)
-            DEVICE_EVENT_T custart, custop;
-            DEVICE_EVENT_CREATE ( &custart );
-            DEVICE_EVENT_CREATE ( &custop );
-            DEVICE_EVENT_RECORD ( custart );
-        #else
-            auto start = std::chrono::high_resolution_clock::now();
-        #endif
-            ( * tupl->runfp ) ( (double*)args.at(0), (double*)args.at(1), (double*)args.at(2) );
-        #if defined (FFTX_CUDA) ||  (FFTX_HIP)
-            DEVICE_EVENT_RECORD ( custop );
-            DEVICE_EVENT_SYNCHRONIZE ( custop );
-            DEVICE_EVENT_ELAPSED_TIME ( &gpuTime, custart, custop );
-        #else
-            auto stop = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<float, std::milli> duration = stop - start;
-            gpuTime = duration.count();
-        #endif
-        ( * tupl->destroyfp )();
-        //end time
-    }
-    else { // use RTC
+    // transformTuple_t *tupl = getLibTransform(name, sizes);
+    // if(tupl != nullptr) { //check if fixed library has transform
+    //     if ( DEBUGOUT) std::cout << "found size in fixed library\n";
+    //     ( * tupl->initfp )();
+    //     #if defined (FFTX_CUDA) ||  (FFTX_HIP)
+    //         DEVICE_EVENT_T custart, custop;
+    //         DEVICE_EVENT_CREATE ( &custart );
+    //         DEVICE_EVENT_CREATE ( &custop );
+    //         DEVICE_EVENT_RECORD ( custart );
+    //     #else
+    //         auto start = std::chrono::high_resolution_clock::now();
+    //     #endif
+    //         ( * tupl->runfp ) ( (double*)args.at(0), (double*)args.at(1), (double*)args.at(2) );
+    //     #if defined (FFTX_CUDA) ||  (FFTX_HIP)
+    //         DEVICE_EVENT_RECORD ( custop );
+    //         DEVICE_EVENT_SYNCHRONIZE ( custop );
+    //         DEVICE_EVENT_ELAPSED_TIME ( &gpuTime, custart, custop );
+    //     #else
+    //         auto stop = std::chrono::high_resolution_clock::now();
+    //         std::chrono::duration<float, std::milli> duration = stop - start;
+    //         gpuTime = duration.count();
+    //     #endif
+    //     ( * tupl->destroyfp )();
+    //     //end time
+    // }
+    // else { // use RTC
         if(executors.find(sizes) != executors.end()) { //check in memory cache
             if ( DEBUGOUT) std::cout << "cached size found, running cached instance\n";
             run(executors.at(sizes));
         }
         else { //check filesystem cache
             std::ostringstream oss;
-            std::string tmp = getFFTX();
-            #if defined FFTX_HIP 
-                oss << tmp << "cache_" << name << "_" << sizes.at(0) << "x" << sizes.at(1) << "x" << sizes.at(2) << "_HIP" << ".txt";
-            #elif defined FFTX_CUDA 
-                oss << tmp << "cache_" << name << "_" << sizes.at(0) << "x" << sizes.at(1) << "x" << sizes.at(2) << "_CUDA" << ".txt";
-            #else
-                oss << tmp << "cache_" << name << "_" << sizes.at(0) << "x" << sizes.at(1) << "x" << sizes.at(2) << "_CPU" << ".txt";
-            #endif
+            // std::string tmp = getFFTX();
+            oss << "kernel.cu";
             std::string file_name = oss.str();
             std::ifstream ifs ( file_name );
             if(ifs) {
-                if ( DEBUGOUT) std::cout << "found cached file on disk\n";
+                std::cout << "found cached file on disk\n";
                 std::string fcontent ( ( std::istreambuf_iterator<char>(ifs) ),
                                        ( std::istreambuf_iterator<char>()    ) );
                 Executor e;
-                e.execute(fcontent);
+                e.execute("cuda");
                 executors.insert(std::make_pair(sizes, e));
                 run(e);
             } 
             else { //generate code at runtime
-                if ( DEBUGOUT) std::cout << "haven't seen size, generating\n";
+                std::cout << "haven't seen size, generating\n";
                 res = semantics2();
                 Executor e;
                 e.execute(res);
@@ -314,16 +343,17 @@ void FFTXProblem::transform(){
                 run(e);
             }
         }
-    }
+    // }
 }
 
 
 void FFTXProblem::run(Executor e) {
-    #if (defined FFTX_HIP || FFTX_CUDA)
-    gpuTime = e.initAndLaunch(args);
-    #else
-    gpuTime = e.initAndLaunch(args, name);
-    #endif
+    e.initAndLaunch(args, sizes, name);
+    // #if (defined FFTX_HIP || FFTX_CUDA)
+    // gpuTime = e.initAndLaunch(args);
+    // #else
+    // gpuTime = e.initAndLaunch(args, name);
+    // #endif
 }
 
 float FFTXProblem::getTime() {

@@ -7,15 +7,6 @@ char a[12] = "hello world";
 char b[12];
 size_t size = 12;
 
-static void uppercase(char* b, char* a, IRIS_OPENMP_KERNEL_ARGS) {
-  int i = 0;
-#pragma omp parallel for shared(b, a) private(i)
-  IRIS_OPENMP_KERNEL_BEGIN(i)
-  if (a[i] >= 'a' && a[i] <= 'z') b[i] = a[i] + 'A' - 'a';
-  else b[i] = a[i];
-  IRIS_OPENMP_KERNEL_END
-}
-
 int main(int argc, char** argv) {
   iris::Platform platform;
   platform.init(&argc, &argv, true);

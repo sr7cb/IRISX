@@ -1,4 +1,4 @@
-using namespace fftx;
+// using namespace fftx;
 
 
 static constexpr auto mddft_script{
