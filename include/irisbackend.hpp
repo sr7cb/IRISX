@@ -72,14 +72,161 @@ void restore_input(int);
 
 class Executor {
     private:
+        int x;
+        enum string_code {
+            zero,
+            one,
+            two,
+            constant,
+            pointer_int,
+            pointer_float,
+            pointer_double,
+            mone
+        };
+        std::vector<void*> kernelargs;
+        std::vector<std::tuple<std::string, int, std::string>> device_names;
+        // std::string kernel_name;
+        std::vector<std::string> kernel_names;
+        std::vector<int> kernel_params;
+        std::string kernel_preamble;
+        std::string kernels;
+        //std::vector<std::string> kernels;
+        std::vector<std::tuple<std::string, int, std::string>> in_params;
+        std::vector<void*> params; 
+        std::vector<void *> data;
         void * shared_lib;
         float CPUTime;
     public:
+        string_code hashit(std::string const& inString);
         float initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, std::string name);
-        void execute(std::string file_name);
+        void execute(std::string file_name, std::string arch);
         float getKernelTime();
+        void parseDataStructure(std::string input);
         //void returnData(std::vector<fftx::array_t<3,std::complex<double>>> &out1);
 };
+
+Executor::string_code Executor::hashit(std::string const& inString) {
+    if(inString == "int") return zero;
+    if(inString == "float") return one;
+    if(inString == "double") return two;
+    if(inString == "constant") return constant;
+    if(inString == "pointer_int") return pointer_int;
+    if(inString == "pointer_float") return pointer_float;
+    if(inString == "pointer_double") return pointer_double;
+    return mone;
+}
+
+void Executor::parseDataStructure(std::string input) {
+    std::istringstream stream(input);
+    char delim = ' ';
+    std::string line;
+    std::string b = "------------------";
+    while(std::getline(stream, line)){
+        if(line.find("JIT BEGIN") != std::string::npos)
+            break;
+    }
+    while(std::getline(stream,line)) {
+        if(line == b) {
+            break;
+        }
+        std::istringstream ss(line);
+        std::string s;
+        //int counter = 0;
+        std::vector<std::string> words;
+        while(std::getline(ss,s,delim)) {
+            words.push_back(s);
+        }
+        int test = atoi(words.at(0).c_str());
+        switch(test) {
+            case 0:
+                device_names.push_back(std::make_tuple(words.at(1), atoi(words.at(2).c_str()), words.at(3)));
+                break;
+            case 1:
+                in_params.push_back(std::make_tuple(words.at(1), atoi(words.at(2).c_str()), words.at(3)));
+                break;
+            case 2:
+                kernel_names.push_back(words.at(1));
+                kernel_params.push_back(atoi(words.at(2).c_str()));
+                kernel_params.push_back(atoi(words.at(3).c_str()));
+                kernel_params.push_back(atoi(words.at(4).c_str()));
+                kernel_params.push_back(atoi(words.at(5).c_str()));
+                kernel_params.push_back(atoi(words.at(6).c_str()));
+                kernel_params.push_back(atoi(words.at(7).c_str()));
+                break;
+            case 3:
+                int loc = atoi(words.at(1).c_str());
+                int size = atoi(words.at(2).c_str());
+                int dt = atoi(words.at(3).c_str());
+                //convert this to a string because spiral prints string type
+                switch(dt) {
+                    case 0: //int
+                    {
+                        if(words.size() < 5) {
+                            int * data1 = new int[size];
+                            memset(data1, 0, size * sizeof(int));
+                            data.push_back(data1);
+                        }
+                        else {
+                            int * data1 = new int[size];
+                            for(int i = 4; i < words.size(); i++) {
+                                data1[i-4] = atoi(words.at(i).c_str());
+                            }
+                            data.push_back(data1);
+                        }
+                        break;
+                    }
+                    case 1: //float
+                    {
+                        if(words.size() < 5) {
+                            float * data1 = new float[size];
+                            memset(data1, 0, size * sizeof(float));
+                            data.push_back(data1);
+                        }
+                        else {
+                            float * data1 = new float[size];
+                            for(int i = 4; i < words.size(); i++) {
+                                data1[i-4] = std::stof(words.at(i));
+                            }
+                            data.push_back(data1);
+                        }
+                        break;
+                    }
+                    case 2: //double
+                    {
+                        if(words.size() < 5) {
+                            double * data1 = new double[size];
+                            memset(data1, 0, size * sizeof(double));
+                            data.push_back(data1);
+                        }
+                        else {
+                            double * data1 = new double[size];
+                            for(int i = 4; i < words.size(); i++) {
+                                data1[i-4] = std::stod(words.at(i));
+                            }
+                            data.push_back(data1);
+                            break;    
+                        }
+                    }
+                    case 3: //constant
+                    {
+                        if(words.size() < 5) {
+                            double * data1 = new double[size];
+                            memset(data1, 0, size * sizeof(double));
+                            data.push_back(data1);
+                        }
+                        break;
+                    }
+                }
+                break;
+        }
+    }
+    while(std::getline(stream, line)) {
+        kernels += line;
+        kernels += "\n";
+    }
+    if ( DEBUGOUT ) std::cout << "parsed input\n";
+
+}
 
 
 float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, std::string name) {
@@ -90,22 +237,23 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
     iris::Mem mem_X(size);
     iris::Mem mem_Y(size);
     iris::Mem mem_sym(size);
-
-    iris::Task task;
-    task.h2d(&mem_X, 0, size, args.at(1));
-    task.h2d(&mem_sym, 0, size, args.at(2));
-    void* params[3] = { &mem_Y, &mem_X, &mem_sym };
-    int params_info[3] = { iris_w, iris_r, iris_r };
+ 
     auto start = std::chrono::high_resolution_clock::now();
-    // task.kernel("init_mddft_spiral", 1, NULL, &size, NULL, 3, params, params_info);
-    task.kernel("ker_mddft_spiral0", 1, NULL, &size, NULL, 3, params, params_info);
-
-    // task.kernel("destroy_mddft_spiral", 1, NULL, &size, NULL, 3, params, params_info);
+    for(int i = 0; i < kernel_names.size(); i++) {
+        iris::Task task;
+        task.h2d(&mem_X, 0, size, args.at(1));
+        task.h2d(&mem_sym, 0, size, args.at(2));
+        void* params[3] = { &mem_Y, &mem_X, &mem_sym };
+        int params_info[3] = { iris_w, iris_r, iris_r };
+        size_t grid = kernel_params[i*6]*kernel_params[i*6+1]*kernel_params[i*6+2];
+        size_t block = kernel_params[i*6+3]*kernel_params[i*6+4]*kernel_params[i*6+5];
+        task.kernel(kernel_names.at(i).c_str(), 1, NULL, &grid, &block, 3, params, params_info);
+        task.d2h(&mem_Y, 0, size, args.at(0));
+        task.submit(iris_roundrobin, NULL, true);
+    }
     auto stop = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float, std::milli> duration = stop - start;
     CPUTime = duration.count();
-    task.d2h(&mem_Y, 0, size, args.at(0));
-    task.submit(iris_roundrobin, NULL, true);
     return getKernelTime();
 }
 
@@ -161,7 +309,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 // }
 
 
-void Executor::execute(std::string arch) {
+void Executor::execute(std::string input, std::string arch) {
+    parseDataStructure ( input );
     if(arch == "cuda") {
         std::cout << "in cuda code portion\n";
         system("nvcc -ptx kernel.cu");

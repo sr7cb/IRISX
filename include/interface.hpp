@@ -149,6 +149,7 @@ std::string getSPIRAL() {
 
 void getImportAndConfIRIS(std::string arch) {
     std::cout << "Load(fftx);\nImportAll(fftx);" << std::endl;
+    std::cout << "ImportAll(simt);\nLoad(jit);\nImport(jit);"<< std::endl;;
     if(arch == "cuda")
         std::cout << "conf := LocalConfig.fftx.confGPU();" << std::endl;
     else if(arch == "hip")
@@ -175,9 +176,10 @@ void getImportAndConf() {
 void printIRISBackend(std::string name, std::vector<int> sizes, std::string arch) {
     std::cout << "if 1 = 1 then opts:=conf.getOpts(transform);\ntt:= opts.tagIt(transform);\nif(IsBound(fftx_includes)) then opts.includes:=fftx_includes;fi;\nc:=opts.fftxGen(tt);\n fi;" << std::endl;
     std::cout << "GASMAN(\"collect\");" << std::endl;
-    if(arch == "cuda")
-        std::cout << "PrintTo(\"kernel.cu\", opts.prettyPrint(c));" << std::endl;
-    else if(arch == "hip")
+    if(arch == "cuda") {
+        std::cout << "PrintTo(\"kernel.cu\", PrintIRISJIT(c,opts));" << std::endl;
+        std::cout << "PrintHIPJIT(c,opts);\n";
+    } else if(arch == "hip")
         std::cout << "PrintTo(\"kernel.hip.cpp\", opts.prettyPrint(c));" << std::endl;
     else
         std::cout << "PrintTo(\"kernel.openmp.c\", opts.prettyPrint(c));" << std::endl;
@@ -281,9 +283,9 @@ std::string FFTXProblem::semantics2() {
     std::string result = exec(tmp.c_str());
     restore_input(save_stdin);
     close(p[0]);
-    // result.erase(result.size()-8);
-    // return result;
-    return "cuda";
+    result.erase(result.size()-8);
+    return result;
+    // return "cuda";
 }
 
 
@@ -330,7 +332,7 @@ void FFTXProblem::transform(){
                 std::string fcontent ( ( std::istreambuf_iterator<char>(ifs) ),
                                        ( std::istreambuf_iterator<char>()    ) );
                 Executor e;
-                e.execute("cuda");
+                e.execute(fcontent, "cuda");
                 executors.insert(std::make_pair(sizes, e));
                 run(e);
             } 
@@ -338,7 +340,7 @@ void FFTXProblem::transform(){
                 std::cout << "haven't seen size, generating\n";
                 res = semantics2();
                 Executor e;
-                e.execute(res);
+                e.execute(res, "cuda");
                 executors.insert(std::make_pair(sizes, e));
                 run(e);
             }
