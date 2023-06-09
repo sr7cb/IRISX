@@ -242,7 +242,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
     for(int i = 0; i < kernel_names.size(); i++) {
         std::cout << kernel_names[i] << std::endl;
     }
-#if 1
+#if 0
     iris::Mem mem_X(size);
     iris::Mem mem_Y(size);
     iris::Mem mem_sym(size);
@@ -256,7 +256,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 #endif
     auto start = std::chrono::high_resolution_clock::now();
 
-#if 1
+#if 0
     for(int i = 0; i < kernel_names.size(); i++) {
         iris::Task task;
         task.h2d(&mem_X, 0, size, args.at(1));
@@ -278,8 +278,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 	iris_task_h2d_full(task, mem_sym, args.at(2));
         void* params[3] = { &mem_Y, &mem_X, &mem_sym };
         int params_info[3] = { iris_w, iris_r, iris_r };
-        //size_t grid = kernel_params[i*6] * kernel_params[i*6+1] * kernel_params[i*6+2];
-        //size_t block = kernel_params[i*6+3] * kernel_params[i*6+4] * kernel_params[i*6+5];
+        size_t grid = kernel_params[i*6] * kernel_params[i*6+1] * kernel_params[i*6+2];
+        size_t block = kernel_params[i*6+3] * kernel_params[i*6+4] * kernel_params[i*6+5];
 	iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, &grid, &block, 3, params, params_info);
 	//iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, &grid, &block, 3, params, params_info);
 	iris_task_d2h_full(task, mem_Y, args.at(0));
