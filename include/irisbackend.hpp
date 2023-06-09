@@ -230,10 +230,18 @@ void Executor::parseDataStructure(std::string input) {
 
 
 float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, std::string name) {
-    size_t size = 1;
-    for(auto x : sizes)
-        size *= x;
-    
+    std::cout << "In init and launch" << std::endl;
+    size_t size = sizes.at(0) * sizes.at(1) * sizes.at(2);
+    std::cout << "start\n";
+    std::cout << device_names.size() << std::endl;
+    std::cout << kernel_names.size() << std::endl;
+    std::cout << "end\n";
+    for(int i = 0; i < device_names.size(); i++) {
+            std::cout << std::get<0>(device_names[i]) << std::endl;
+        }
+    for(int i = 0; i < kernel_names.size(); i++) {
+        std::cout << kernel_names[i] << std::endl;
+    }
 #if 1
     iris::Mem mem_X(size);
     iris::Mem mem_Y(size);
@@ -338,6 +346,12 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 
 void Executor::execute(std::string input, std::string arch) {
     parseDataStructure ( input );
+    for(int i = 0; i < device_names.size(); i++) {
+        std::cout << std::get<0>(device_names[i]) << std::endl;
+    }
+    for(int i = 0; i < kernel_names.size(); i++) {
+        std::cout << kernel_names[i] << std::endl;
+    }
     if(arch == "cuda") {
         std::cout << "in cuda code portion\n";
         system("nvcc -ptx kernel.cu");
