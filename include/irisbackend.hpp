@@ -233,12 +233,22 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
     size_t size = 1;
     for(auto x : sizes)
         size *= x;
-      
+    
+#if 1
     iris::Mem mem_X(size);
     iris::Mem mem_Y(size);
     iris::Mem mem_sym(size);
- 
+#else
+    iris_mem mem_X;
+    iris_mem mem_Y;
+    iris_mem mem_sym;
+    iris_mem_create(size * sizeof(double), &mem_X);
+    iris_mem_create(size * sizeof(double), &mem_Y);
+    iris_mem_create(size * sizeof(double), &mem_sym);
+#endif
     auto start = std::chrono::high_resolution_clock::now();
+
+#if 1
     for(int i = 0; i < kernel_names.size(); i++) {
         iris::Task task;
         task.h2d(&mem_X, 0, size, args.at(1));
@@ -251,6 +261,23 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         task.d2h(&mem_Y, 0, size, args.at(0));
         task.submit(iris_roundrobin, NULL, true);
     }
+#else
+    for(int i = 0; i < kernel_names.size(); i++) {
+        iris_task task;
+        iris_task_create(&task);
+	iris_task_h2d_full(task, mem_Y, args.at(0));
+	iris_task_h2d_full(task, mem_X, args.at(1));
+	iris_task_h2d_full(task, mem_sym, args.at(2));
+        void* params[3] = { &mem_Y, &mem_X, &mem_sym };
+        int params_info[3] = { iris_w, iris_r, iris_r };
+        //size_t grid = kernel_params[i*6] * kernel_params[i*6+1] * kernel_params[i*6+2];
+        //size_t block = kernel_params[i*6+3] * kernel_params[i*6+4] * kernel_params[i*6+5];
+	iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, &grid, &block, 3, params, params_info);
+	//iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, &grid, &block, 3, params, params_info);
+	iris_task_d2h_full(task, mem_Y, args.at(0));
+	iris_task_submit(task, iris_gpu, NULL, 1);
+    }
+#endif
     auto stop = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float, std::milli> duration = stop - start;
     CPUTime = duration.count();
