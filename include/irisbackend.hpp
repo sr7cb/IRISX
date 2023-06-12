@@ -230,6 +230,8 @@ void Executor::parseDataStructure(std::string input) {
 
 
 float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, std::string name) {
+    iris::Platform platform;
+    platform.init(NULL, NULL, true);
     std::cout << "In init and launch" << std::endl;
     size_t size = sizes.at(0) * sizes.at(1) * sizes.at(2);
     std::cout << "start\n";
@@ -301,6 +303,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
     std::chrono::duration<float, std::milli> duration = stop - start;
     CPUTime = duration.count();
     return getKernelTime();
+    platform.finalize();
 }
 
 // float Executor::initAndLaunch(std::vector<void*>& args, std::string name) {
