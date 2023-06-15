@@ -117,7 +117,6 @@ void restore_input(int saved_fd)
 std::string getIRISARCH() {
     const char * tmp2 = std::getenv("IRIS_ARCHS");
     std::string tmp(tmp2 ? tmp2 : "");
-    std::cout << tmp << std::endl;
     if (tmp.empty()) {
         std::cout << "[ERROR] No such variable found, please set IRIS_ARCHS env variable" << std::endl;
         exit(-1);
@@ -149,28 +148,28 @@ std::string getSPIRAL() {
 
 void getImportAndConfIRIS(std::string arch) {
     std::cout << "Load(fftx);\nImportAll(fftx);" << std::endl;
-    std::cout << "ImportAll(simt);\nLoad(jit);\nImport(jit);"<< std::endl;;
+    std::cout << "ImportAll(simt);\nLoad(jit);\nImport(jit);"<< std::endl;
     if(arch == "cuda")
         std::cout << "conf := LocalConfig.fftx.confGPU();" << std::endl;
     else if(arch == "hip")
-        std::cout << "conf := FFTXGlobals.defaultHIPConf();\n";
+        std::cout << "conf := FFTXGlobals.defaultHIPConf();" << std::endl;
     else
-        std::cout << "conf := LocalConfig.fftx.defaultConf();\n";
+        std::cout << "conf := LocalConfig.fftx.defaultConf();" << std::endl;
 }
 
-void getImportAndConf() {
-    std::cout << "Load(fftx);\nImportAll(fftx);\n";
-    #if (defined FFTX_HIP || FFTX_CUDA)
-    std::cout << "ImportAll(simt);\nLoad(jit);\nImport(jit);\n";
-    #endif
-    #if defined FFTX_HIP 
-    std::cout << "conf := FFTXGlobals.defaultHIPConf();\n";
-    #elif defined FFTX_CUDA 
-    std::cout << "conf := LocalConfig.fftx.confGPU();\n";
-    #else
-    std::cout << "conf := LocalConfig.fftx.defaultConf();\n";
-    #endif
-}
+// void getImportAndConf() {
+//     std::cout << "Load(fftx);\nImportAll(fftx);\n";
+//     #if (defined FFTX_HIP || FFTX_CUDA)
+//     std::cout << "ImportAll(simt);\nLoad(jit);\nImport(jit);\n";
+//     #endif
+//     #if defined FFTX_HIP 
+//     std::cout << "conf := FFTXGlobals.defaultHIPConf();\n";
+//     #elif defined FFTX_CUDA 
+//     std::cout << "conf := LocalConfig.fftx.confGPU();\n";
+//     #else
+//     std::cout << "conf := LocalConfig.fftx.defaultConf();\n";
+//     #endif
+// }
 
 
 void printIRISBackend(std::string name, std::vector<int> sizes, std::string arch) {
@@ -180,9 +179,11 @@ void printIRISBackend(std::string name, std::vector<int> sizes, std::string arch
         std::cout << "PrintTo(\"kernel.cu\", PrintIRISJIT(c,opts));" << std::endl;
         std::cout << "PrintTo(\"kerneljit.cu\", PrintHIPJIT(c,opts));" << std::endl;
         std::cout << "PrintHIPJIT(c,opts);\n";
-    } else if(arch == "hip")
-        std::cout << "PrintTo(\"kernel.hip.cpp\", opts.prettyPrint(c));" << std::endl;
-    else
+    } else if(arch == "hip") {
+        std::cout << "PrintTo(\"kernel.cu\", PrintIRISJIT(c,opts));" << std::endl;
+        std::cout << "PrintTo(\"kerneljit.cu\", PrintHIPJIT(c,opts));" << std::endl;
+        std::cout << "PrintHIPJIT(c,opts);\n";
+    } else
         std::cout << "PrintTo(\"kernel.openmp.c\", opts.prettyPrint(c));" << std::endl;
 }
 
@@ -273,9 +274,9 @@ std::string FFTXProblem::semantics2() {
         std::cout << "pipe failed\n";
     std::stringstream out; 
     std::streambuf *coutbuf = std::cout.rdbuf(out.rdbuf()); //save old buf
-    getImportAndConfIRIS("cuda");
+    getImportAndConfIRIS(getIRISARCH());
     semantics();
-    printIRISBackend(name, sizes, "cuda");
+    printIRISBackend(name, sizes, getIRISARCH());
     std::cout.rdbuf(coutbuf);
     std::string script = out.str();
     int res = write(p[1], script.c_str(), script.size());
@@ -333,7 +334,7 @@ void FFTXProblem::transform(){
                 std::string fcontent ( ( std::istreambuf_iterator<char>(ifs) ),
                                        ( std::istreambuf_iterator<char>()    ) );
                 Executor e;
-                e.execute(fcontent, "cuda");
+                e.execute(fcontent, getIRISARCH());
                 executors.insert(std::make_pair(sizes, e));
                 run(e);
             } 
@@ -341,7 +342,7 @@ void FFTXProblem::transform(){
                 std::cout << "haven't seen size, generating\n";
                 res = semantics2();
                 Executor e;
-                e.execute(res, "cuda");
+                e.execute(res, getIRISARCH());
                 executors.insert(std::make_pair(sizes, e));
                 run(e);
             }

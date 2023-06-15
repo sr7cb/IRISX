@@ -232,73 +232,88 @@ void Executor::parseDataStructure(std::string input) {
 float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, std::string name) {
     iris::Platform platform;
     platform.init(NULL, NULL, true);
-    std::cout << "In init and launch" << std::endl;
     size_t size = sizes.at(0) * sizes.at(1) * sizes.at(2);
-    std::cout << "start\n";
-    std::cout << device_names.size() << std::endl;
-    std::cout << kernel_names.size() << std::endl;
-    std::cout << "end\n";
-    for(int i = 0; i < device_names.size(); i++) {
-            std::cout << std::get<0>(device_names[i]) << std::endl;
+    if ( DEBUGOUT) {
+        std::cout << "In init and launch" << std::endl;
+        std::cout << "size " << size << std::endl;
+        std::cout << "start\n";
+        std::cout << device_names.size() << std::endl;
+        std::cout << kernel_names.size() << std::endl;
+        std::cout << "end\n";
+        for(int i = 0; i < device_names.size(); i++) {
+                std::cout << std::get<0>(device_names[i]) << std::endl;
+            }
+        for(int i = 0; i < kernel_names.size(); i++) {
+            std::cout << kernel_names[i] << std::endl;
         }
-    for(int i = 0; i < kernel_names.size(); i++) {
-        std::cout << kernel_names[i] << std::endl;
     }
-#if 0
-    iris::Mem mem_X(size);
-    iris::Mem mem_Y(size);
-    iris::Mem mem_sym(size);
-#else
     iris_mem mem_X;
     iris_mem mem_Y;
     iris_mem mem_sym;
     iris_mem_create(size * sizeof(double) * 2, &mem_X);
     iris_mem_create(size * sizeof(double) * 2, &mem_Y);
     iris_mem_create(size * sizeof(double) * 2, &mem_sym);
+    std::vector<void*> params = { &mem_Y, &mem_X, &mem_sym};
+    std::vector<int> params_info = { iris_w, iris_r, iris_r};
+    int pointers = 0;
+    for(int i = 0; i < device_names.size(); i++) {
+        std::string test = std::get<2>(device_names[i]);
+        switch(hashit(test)) {
+            case constant:
+            {
+                break;
+            }
+            case pointer_int:
+            {
+                iris_mem * mem_p = new iris_mem;
+                iris_mem_create(std::get<1>(device_names.at(i)) * sizeof(double), mem_p);
+                params.push_back(mem_p);
+                params_info.push_back(iris_rw);
+                pointers++;
+                break;
+            }
+            case pointer_float:
+            {
+                iris_mem * mem_p = new iris_mem;
+                iris_mem_create(std::get<1>(device_names.at(i)) * sizeof(double), mem_p);
+                params.push_back(mem_p);
+                params_info.push_back(iris_rw);
+                pointers++;
+                break;
+            }
+            case pointer_double:
+            {
+                iris_mem * mem_p = new iris_mem;
+                iris_mem_create(std::get<1>(device_names.at(i)) * sizeof(double), mem_p);
+                params.push_back(mem_p);
+                params_info.push_back(iris_rw);
+                pointers++;
+                break;
+            }
+            default:
+                break;
+        }
+    }
 
-    /*iris_data_mem_create(&mem_X, args.at(1), size);
-    iris_data_mem_create(&mem_sym, args.at(2), size);
-    iris_data_mem_create(&mem_Y, args.at(0), size);*/
-
-#endif
     auto start = std::chrono::high_resolution_clock::now();
 
-#if 0
-    for(int i = 0; i < kernel_names.size(); i++) {
-        iris::Task task;
-        task.h2d(&mem_X, 0, size, args.at(1));
-        task.h2d(&mem_sym, 0, size, args.at(2));
-        void* params[3] = { &mem_Y, &mem_X, &mem_sym };
-        int params_info[3] = { iris_w, iris_r, iris_r };
-        size_t grid = kernel_params[i*6]*kernel_params[i*6+1]*kernel_params[i*6+2];
-        size_t block = kernel_params[i*6+3]*kernel_params[i*6+4]*kernel_params[i*6+5];
-        task.kernel(kernel_names.at(i).c_str(), 1, NULL, &grid, &block, 3, params, params_info);
-        task.d2h(&mem_Y, 0, size, args.at(0));
-        task.submit(iris_roundrobin, NULL, true);
-    }
-#else
-    //for(int i = 0; i < 1; i++) {
     for(int i = 0; i < kernel_names.size(); i++) {
         iris_task task;
         iris_task_create(&task);
 
-	iris_task_h2d_full(task, mem_Y, args.at(0));
-	iris_task_h2d_full(task, mem_X, args.at(1));
-	iris_task_h2d_full(task, mem_sym, args.at(2));
-
-        void* params[3] = { &mem_Y, &mem_X, &mem_sym };
-        int params_info[3] = { iris_w, iris_r, iris_r };
+        iris_task_h2d_full(task, mem_Y, args.at(0));
+        iris_task_h2d_full(task, mem_X, args.at(1));
+        iris_task_h2d_full(task, mem_sym, args.at(2));
+    
         size_t grid = kernel_params[i*6] * kernel_params[i*6+1] * kernel_params[i*6+2];
         size_t block = kernel_params[i*6+3] * kernel_params[i*6+4] * kernel_params[i*6+5];
-	iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, &grid, &block, 3, params, params_info);
-	//iris_task_dmem_flush_out(task, mem_Y);
-	iris_task_d2h_full(task, mem_Y, args.at(0));
+        iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, &grid, &block, 3+pointers, params.data(), params_info.data());
 
-	iris_task_submit(task, iris_roundrobin, NULL, 1);
-	//iris_task_submit(task, iris_gpu, NULL, 1);
+        iris_task_d2h_full(task, mem_Y, args.at(0));
+
+        iris_task_submit(task, iris_roundrobin, NULL, 1);
     }
 
-#endif
     auto stop = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float, std::milli> duration = stop - start;
     CPUTime = duration.count();
@@ -306,135 +321,21 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
     platform.finalize();
 }
 
-// float Executor::initAndLaunch(std::vector<void*>& args, std::string name) {
-//     if ( DEBUGOUT) std::cout << "Loading shared library\n";
-//     #if defined(_WIN32) || defined (_WIN64)
-//         shared_lib = dlopen("temp/libtmp.dll", RTLD_LAZY);
-//     #elif defined(__APPLE__)
-//         shared_lib = dlopen("temp/libtmp.dylib", RTLD_LAZY);
-//     #else
-//         shared_lib = dlopen("temp/libtmp.so", RTLD_LAZY); 
-//     #endif
-//     std::ostringstream oss;
-//     std::ostringstream oss1;
-//     std::ostringstream oss2;
-//     oss << "init_" << name << "_spiral";
-//     oss1 << name << "_spiral";
-//     oss2 << "destroy_" << name << "_spiral";
-//     std::string init = oss.str();
-//     std::string transform = oss1.str();
-//     std::string destroy = oss2.str();
-//     if(!shared_lib) {
-//         std::cout << "Cannot open library: " << dlerror() << '\n';
-//         exit(0);
-//     }
-//     else if(shared_lib){
-//         void (*fn1) ()= (void (*)())dlsym(shared_lib, init.c_str());
-//         void (*fn2) (double *, double *, double *) = (void (*)(double *, double *, double *))dlsym(shared_lib, transform.c_str());
-//         void (*fn3) ()= (void (*)())dlsym(shared_lib, destroy.c_str());
-//         auto start = std::chrono::high_resolution_clock::now();
-//         if(fn1) {
-//             fn1();
-//         }else {
-//             std::cout << init << "function didnt run" << std::endl;
-//         }
-//         if(fn2) {
-//             fn2((double*)args.at(0),(double*)args.at(1), (double*)args.at(2));
-//         }else {
-//             std::cout << transform << "function didnt run" << std::endl;
-//         }
-//         if(fn3){
-//             fn3();
-//         }else {
-//             std::cout << destroy << "function didnt run" << std::endl;
-//         }
-//         auto stop = std::chrono::high_resolution_clock::now();
-//         std::chrono::duration<float, std::milli> duration = stop - start;
-//         CPUTime = duration.count();
-//         dlclose(shared_lib);
-//     }
-//     // system("rm -rf temp");
-//     return getKernelTime();
-// }
-
 
 void Executor::execute(std::string input, std::string arch) {
     parseDataStructure ( input );
-    for(int i = 0; i < device_names.size(); i++) {
-        std::cout << std::get<0>(device_names[i]) << std::endl;
-    }
-    for(int i = 0; i < kernel_names.size(); i++) {
-        std::cout << kernel_names[i] << std::endl;
-    }
     if(arch == "cuda") {
         std::cout << "in cuda code portion\n";
         system("nvcc -ptx kernel.cu");
     }
     else if(arch == "hip") {
+        std::cout << "in hip code portion\n";
         system("hipcc --genco -o kernel.hip kenrnel.hip.cpp");
     }
     else {
         system("gcc -I$(IRIS)/include/ -O3 -std=c99 -fopenmp -fPIC -shared -I. -o kernel.openmp.so kernel.openmp.c");
     }
 }
-
-// void Executor::execute(std::string result) {
-//     if ( DEBUGOUT) std::cout << "entered CPU backend execute\n";
-//     std::string compile;
-    
-//     if ( DEBUGOUT) {
-//         std::cout << "created compile\n";
-//     }
-
-//     std::string result2 = result.substr(result.find("*/")+3, result.length());
-//     int check = mkdir("temp", 0777);
-//     // if((check)) {
-//     //     std::cout << "failed to create temp directory for runtime code\n";
-//     //     exit(-1);
-//     // }
-//     std::ofstream out("temp/spiral_generated.c");
-//     out << result2;
-//     out.close();
-//     std::ofstream cmakelists("temp/CMakeLists.txt");
-//     if(DEBUGOUT)
-//         cmakelists << "set ( _addl_options -Wall -Wextra )" << std::endl;
-
-//     cmakelists << cmake_script;
-//     cmakelists.close();
-//     if ( DEBUGOUT )
-//         std::cout << "compiling\n";
-
-//     char buff[FILENAME_MAX]; //create string buffer to hold path
-//     getcwd( buff, FILENAME_MAX );
-//     std::string current_working_dir(buff);
-    
-//     check = chdir("temp");
-//     // if(!(check)) {
-//     //     std::cout << "failed to create temp directory for runtime code\n";
-//     //     exit(-1);
-//     // }
-//     #if defined(_WIN32) || defined (_WIN64)
-//         system("cmake . && make");
-//     #elif defined(__APPLE__)
-//         struct utsname unameData;
-//         uname(&unameData);
-//         std::string machine_name(unameData.machine);
-//         if(machine_name == "arm64")
-//             system("cmake -DCMAKE_APPLE_SILICON_PROCESSOR=arm64 . && make");
-//         else
-//             system("cmake . && make");
-//     #else
-//         system("cmake . && make"); 
-//     #endif
-//     check = chdir(current_working_dir.c_str());
-//     // if((check)) {
-//     //     std::cout << "failed to create temp directory for runtime code\n";
-//     //     exit(-1);
-//     // }
-//     // system("cd ..;");
-//     if ( DEBUGOUT )
-//         std::cout << "finished compiling\n";
-// }
 
 float Executor::getKernelTime() {
     return CPUTime;
