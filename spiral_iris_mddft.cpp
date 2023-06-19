@@ -25,9 +25,10 @@ static void buildInputBuffer ( double *host_X, std::vector<int> sizes )
 }
 
 int main(int argc, char** argv) {
-  getIRISARCH();
-  iris::Platform platform;
-  platform.init(&argc, &argv, true);
+  // getIRISARCH();
+  // std::cout << getIRISARCH() << std::endl;
+  // iris::Platform platform;
+  // platform.init(&argc, &argv, true);
   int n,m,k;
   n = 8;
   m = 8;
@@ -38,7 +39,10 @@ int main(int argc, char** argv) {
   X = new double[n*m*k*2];
   Y = new double[n*m*k*2];
   sym = new double[n*m*k*2];
-  buildInputBuffer(X, sizes);
+  for(int i = 0; i < n*m*k*2; i++) {
+    X[i] = 1.0;
+  }
+  // buildInputBuffer(X, sizes);
   std::vector<void*> args{Y,X,sym};
   MDDFTProblem mdp(args,sizes,"mddft");
 
@@ -50,7 +54,7 @@ int main(int argc, char** argv) {
 
 //   printf("%s\n", b);
 
-  platform.finalize();
+  // platform.finalize();
 
   return 0;
 }

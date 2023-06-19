@@ -330,7 +330,7 @@ void Executor::execute(std::string input, std::string arch) {
     }
     else if(arch == "hip") {
         std::cout << "in hip code portion\n";
-        system("hipcc --genco -o kernel.hip kenrnel.hip.cpp");
+        system("hipcc --genco -o kernel.hip kernel.hip.cpp");
     }
     else {
         system("gcc -I$(IRIS)/include/ -O3 -std=c99 -fopenmp -fPIC -shared -I. -o kernel.openmp.so kernel.openmp.c");

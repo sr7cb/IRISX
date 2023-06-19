@@ -180,8 +180,8 @@ void printIRISBackend(std::string name, std::vector<int> sizes, std::string arch
         std::cout << "PrintTo(\"kerneljit.cu\", PrintHIPJIT(c,opts));" << std::endl;
         std::cout << "PrintHIPJIT(c,opts);\n";
     } else if(arch == "hip") {
-        std::cout << "PrintTo(\"kernel.cu\", PrintIRISJIT(c,opts));" << std::endl;
-        std::cout << "PrintTo(\"kerneljit.cu\", PrintHIPJIT(c,opts));" << std::endl;
+        std::cout << "PrintTo(\"kernel.hip.cpp\", PrintIRISJIT(c,opts));" << std::endl;
+        std::cout << "PrintTo(\"kerneljit.hip.cpp\", PrintHIPJIT(c,opts));" << std::endl;
         std::cout << "PrintHIPJIT(c,opts);\n";
     } else
         std::cout << "PrintTo(\"kernel.openmp.c\", opts.prettyPrint(c));" << std::endl;
@@ -326,7 +326,12 @@ void FFTXProblem::transform(){
         else { //check filesystem cache
             std::ostringstream oss;
             // std::string tmp = getFFTX();
-            oss << "kerneljit.cu";
+            if(getIRISARCH() == "cuda")
+                oss << "kerneljit.cu";
+            else if(getIRISARCH() == "hip")
+                oss << "kerneljit.hip.cpp";
+            else
+                oss << "kerneljit.cu";
             std::string file_name = oss.str();
             std::ifstream ifs ( file_name );
             if(ifs) {
