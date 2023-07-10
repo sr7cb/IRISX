@@ -30,9 +30,9 @@ int main(int argc, char** argv) {
   // iris::Platform platform;
   // platform.init(&argc, &argv, true);
   int n,m,k;
-  n = 8;
-  m = 8;
-  k = 8;
+  n = 32;
+  m = 32;
+  k = 32;
 
   std::vector<int> sizes{n,m,k};
   double *Y, *X, *sym;
