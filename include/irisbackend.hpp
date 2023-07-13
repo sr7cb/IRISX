@@ -250,9 +250,16 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
     iris_mem mem_X;
     iris_mem mem_Y;
     iris_mem mem_sym;
+#if 1 
     iris_mem_create(size * sizeof(double) * 2, &mem_X);
     iris_mem_create(size * sizeof(double) * 2, &mem_Y);
     iris_mem_create(size * sizeof(double) * 2, &mem_sym);
+#else
+    iris_data_mem_create(&mem_Y, args.at(0), size * sizeof(double) * 2);
+    iris_data_mem_create(&mem_X, args.at(1), size * sizeof(double) * 2);
+    iris_data_mem_create(&mem_sym, args.at(2), size * sizeof(double) * 2);
+#endif
+
     std::vector<void*> params = { &mem_Y, &mem_X, &mem_sym};
     std::vector<int> params_info = { iris_w, iris_r, iris_r};
     std::vector<void*> temps;
@@ -267,7 +274,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
             case pointer_int:
             {
                 iris_mem * mem_p = new iris_mem;
-                iris_mem_create(std::get<1>(device_names.at(i)) * sizeof(int), mem_p);
+                //iris_mem_create(std::get<1>(device_names.at(i)) * sizeof(int), mem_p);
                 params.push_back(mem_p);
                 params_info.push_back(iris_rw);
                 pointers++;
@@ -276,7 +283,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
             case pointer_float:
             {
                 iris_mem * mem_p = new iris_mem;
-                iris_mem_create(std::get<1>(device_names.at(i)) * sizeof(float), mem_p);
+                //iris_mem_create(std::get<1>(device_names.at(i)) * sizeof(float), mem_p);
                 params.push_back(mem_p);
                 params_info.push_back(iris_rw);
                 pointers++;
@@ -287,7 +294,12 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 double * temp = new double[std::get<1>(device_names.at(i))];
                 temps.push_back(temp);
                 iris_mem * mem_p = new iris_mem;
+#if 1 
                 iris_mem_create(std::get<1>(device_names.at(i)) * sizeof(double), mem_p);
+#else
+    		iris_data_mem_create(mem_p, temps.at(i), 
+				std::get<1>(device_names.at(i)) * sizeof(double));
+#endif
                 params.push_back(mem_p);
                 params_info.push_back(iris_rw);
                 pointers++;
@@ -297,28 +309,35 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 break;
         }
     }
-
+ 
     auto start = std::chrono::high_resolution_clock::now();
 
     for(int i = 0; i < kernel_names.size(); i++) {
         iris_task task;
         iris_task_create(&task);
 
+#if 1
         iris_task_h2d_full(task, mem_Y, args.at(0));
         iris_task_h2d_full(task, mem_X, args.at(1));
         iris_task_h2d_full(task, mem_sym, args.at(2));
         for(int j = 0; j < temps.size(); j++)
             iris_task_h2d_full(task, ((*(iris_mem*)params.at(j+3))), temps.at(j));
-    
+#endif    
         size_t grid = kernel_params[i*6] * kernel_params[i*6+1] * kernel_params[i*6+2];
         size_t block = kernel_params[i*6+3] * kernel_params[i*6+4] * kernel_params[i*6+5];
         std::cout << "launching: " << grid << ", " << block << std::endl;
         iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, &grid, &block, 3+pointers, params.data(), params_info.data());
 
+#if 1
         iris_task_d2h_full(task, mem_Y, args.at(0));
-        for(int j = 0; j < temps.size(); j++)
-            iris_task_d2h_full(task, ((*(iris_mem*)params.at(j+3))), temps.at(j));
+#else
+	if(i == kernel_names.size() -1)   iris_task_dmem_flush_out(task, mem_Y);
+#endif
 
+#if 1
+        //for(int j = 0; j < temps.size(); j++)
+        //    iris_task_d2h_full(task, ((*(iris_mem*)params.at(j+3))), temps.at(j));
+#endif
         iris_task_submit(task, iris_roundrobin, NULL, 1);
     }
 
