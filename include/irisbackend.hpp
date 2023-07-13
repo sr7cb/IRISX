@@ -335,8 +335,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 #endif
 
 #if 1
-        //for(int j = 0; j < temps.size(); j++)
-        //    iris_task_d2h_full(task, ((*(iris_mem*)params.at(j+3))), temps.at(j));
+        for(int j = 0; j < temps.size(); j++)
+            iris_task_d2h_full(task, ((*(iris_mem*)params.at(j+3))), temps.at(j));
 #endif
         iris_task_submit(task, iris_roundrobin, NULL, 1);
     }
