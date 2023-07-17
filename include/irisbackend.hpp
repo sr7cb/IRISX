@@ -323,10 +323,12 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         for(int j = 0; j < temps.size(); j++)
             iris_task_h2d_full(task, ((*(iris_mem*)params.at(j+3))), temps.at(j));
 #endif    
-        size_t grid = kernel_params[i*6] * kernel_params[i*6+1] * kernel_params[i*6+2];
-        size_t block = kernel_params[i*6+3] * kernel_params[i*6+4] * kernel_params[i*6+5];
-        std::cout << "launching: " << grid << ", " << block << std::endl;
-        iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, &grid, &block, 3+pointers, params.data(), params_info.data());
+        std::cout << "grid: " << kernel_params[i*6] <<  ", " << kernel_params[i*6+1] << ", " << kernel_params[i*6+2] << std::endl;
+        std::cout << "block: " << kernel_params[i*6+3] <<  ", " << kernel_params[i*6+4] <<  ", " << kernel_params[i*6+5] << std::endl;
+        std::vector<size_t> grid{(size_t)kernel_params[i*6], (size_t)kernel_params[i*6+1], (size_t)kernel_params[i*6+2]};
+        std::vector<size_t> block{(size_t)kernel_params[i*6+3], (size_t)kernel_params[i*6+4], (size_t)kernel_params[i*6+5]};
+        // std::cout << "launching: " << grid << ", " << block << std::endl;
+        iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, grid.data(), block.data(), 3+pointers, params.data(), params_info.data());
 
 #if 1
         iris_task_d2h_full(task, mem_Y, args.at(0));

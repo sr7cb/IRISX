@@ -8,6 +8,7 @@
 #pragma GCC diagnostic pop
 #include <stdio.h>
 #include <iostream>
+#include <chrono>
 
 
 static void buildInputBuffer ( double *host_X, std::vector<int> sizes )
@@ -29,10 +30,11 @@ int main(int argc, char** argv) {
   // std::cout << getIRISARCH() << std::endl;
   // iris::Platform platform;
   // platform.init(&argc, &argv, true);
+  auto start = std::chrono::high_resolution_clock::now();
   int n,m,k;
-  n = 32;
-  m = 32;
-  k = 32;
+  n = 8;
+  m = 8;
+  k = 8;
 
   std::vector<int> sizes{n,m,k};
   double *Y, *X, *sym;
@@ -45,9 +47,12 @@ int main(int argc, char** argv) {
   // buildInputBuffer(X, sizes);
   std::vector<void*> args{Y,X,sym};
   MDDFTProblem mdp(args,sizes,"mddft");
-
+  
   mdp.transform();
 
+  auto stop = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+  std::cout << duration.count() << std::endl;
   for(int i = 0; i < 10; i++) {
     std::cout << Y[i] << std::endl;
   }
