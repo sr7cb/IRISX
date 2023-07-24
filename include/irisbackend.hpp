@@ -90,10 +90,12 @@ class Executor {
         std::vector<int> kernel_params;
         std::string kernel_preamble;
         std::string kernels;
+        std::vector<std::vector<int>> values;
         //std::vector<std::string> kernels;
         std::vector<std::tuple<std::string, int, std::string>> in_params;
         std::vector<void*> params; 
         std::vector<void *> data;
+        std::vector<int> data_lengths;
         void * shared_lib;
         float CPUTime;
     public:
@@ -157,46 +159,49 @@ void Executor::parseDataStructure(std::string input) {
                 int loc = atoi(words.at(1).c_str());
                 int size = atoi(words.at(2).c_str());
                 int dt = atoi(words.at(3).c_str());
+                std::cout << loc << ":" << dt << std::endl;
                 //convert this to a string because spiral prints string type
                 switch(dt) {
                     case 0: //int
                     {
-                        if(words.size() < 5) {
-                            int * data1 = new int[size];
-                            memset(data1, 0, size * sizeof(int));
-                            data.push_back(data1);
-                        }
-                        else {
-                            int * data1 = new int[size];
-                            for(int i = 4; i < words.size(); i++) {
-                                data1[i-4] = atoi(words.at(i).c_str());
-                            }
-                            data.push_back(data1);
-                        }
+                        // if(words.size() < 5) {
+                        //     int * data1 = new int[size];
+                        //     memset(data1, 0, size * sizeof(int));
+                        //     data.push_back(data1);
+                        // }
+                        // else {
+                        //     int * data1 = new int[size];
+                        //     for(int i = 4; i < words.size(); i++) {
+                        //         data1[i-4] = atoi(words.at(i).c_str());
+                        //     }
+                        //     data.push_back(data1);
+                        // }
                         break;
                     }
                     case 1: //float
                     {
-                        if(words.size() < 5) {
-                            float * data1 = new float[size];
-                            memset(data1, 0, size * sizeof(float));
-                            data.push_back(data1);
-                        }
-                        else {
-                            float * data1 = new float[size];
-                            for(int i = 4; i < words.size(); i++) {
-                                data1[i-4] = std::stof(words.at(i));
-                            }
-                            data.push_back(data1);
-                        }
+                        // if(words.size() < 5) {
+                        //     float * data1 = new float[size];
+                        //     memset(data1, 0, size * sizeof(float));
+                        //     data.push_back(data1);
+                        // }
+                        // else {
+                        //     float * data1 = new float[size];
+                        //     for(int i = 4; i < words.size(); i++) {
+                        //         data1[i-4] = std::stof(words.at(i));
+                        //     }
+                        //     data.push_back(data1);
+                        // }
                         break;
                     }
                     case 2: //double
                     {
+                        std::cout << "This is the words size double\n" << words.size() << std::endl;
                         if(words.size() < 5) {
                             double * data1 = new double[size];
-                            memset(data1, 0, size * sizeof(double));
+                            // memset(data1, 0, size * sizeof(double));
                             data.push_back(data1);
+                            data_lengths.push_back(size); 
                         }
                         else {
                             double * data1 = new double[size];
@@ -204,15 +209,25 @@ void Executor::parseDataStructure(std::string input) {
                                 data1[i-4] = std::stod(words.at(i));
                             }
                             data.push_back(data1);
-                            break;    
+                            data_lengths.push_back(words.size()-4); 
                         }
+                        break;
                     }
                     case 3: //constant
                     {
+                        std::cout << "This is the words size constant\n" << words.size() << std::endl;
                         if(words.size() < 5) {
                             double * data1 = new double[size];
-                            memset(data1, 0, size * sizeof(double));
+                            // memset(data1, 0, size * sizeof(double));
                             data.push_back(data1);
+                        }
+                        else {
+                            double * data1 = new double[words.size()-4];
+                            for(int i = 4; i < words.size(); i++) {
+                                data1[i-4] = std::stod(words.at(i));
+                            }
+                            data.push_back(data1);
+                            data_lengths.push_back(words.size()-4);  
                         }
                         break;
                     }
@@ -246,6 +261,15 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         for(int i = 0; i < kernel_names.size(); i++) {
             std::cout << kernel_names[i] << std::endl;
         }
+        std::cout << "data size " << data.size() << std::endl;
+        std::cout << "data_lengths size " << data_lengths.size() << std::endl;
+        // for(int i = 0; i < data.size(); i++) {
+        //     std::cout << "size of list " << data_lengths.at(i) << std::endl;
+        //     for(int j = 0; j < data_lengths.at(i); j++){
+        //        std::cout << ((double*)data.at(i))[j] << std::endl;
+        //     }
+        // }
+        // exit(0);
     //}
     iris_mem mem_X;
     iris_mem mem_Y;
@@ -262,13 +286,20 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 
     std::vector<void*> params = { &mem_Y, &mem_X, &mem_sym};
     std::vector<int> params_info = { iris_w, iris_r, iris_r};
-    std::vector<void*> temps;
+    // std::vector<void*> temps;
     int pointers = 0;
     for(int i = 0; i < device_names.size(); i++) {
         std::string test = std::get<2>(device_names[i]);
+        std::cout << std::get<0>(device_names[i]) << ":" << test << std::endl;
         switch(hashit(test)) {
             case constant:
             {
+                // temps.push_back(data.at(i));
+                iris_mem * mem_p = new iris_mem;
+                iris_mem_create(data_lengths.at(i) * sizeof(double), mem_p);
+                params.push_back(mem_p);
+                params_info.push_back(iris_rw);
+                pointers++;
                 break;
             }
             case pointer_int:
@@ -291,8 +322,24 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
             }
             case pointer_double:
             {
-                double * temp = new double[std::get<1>(device_names.at(i))];
-                temps.push_back(temp);
+                // double * temp = new double[std::get<1>(device_names.at(i))];
+                // temps.push_back(temp);
+                iris_mem * mem_p = new iris_mem;
+#if 1 
+                iris_mem_create(std::get<1>(device_names.at(i)) * sizeof(double), mem_p);
+#else
+    		iris_data_mem_create(mem_p, temps.at(i), 
+				std::get<1>(device_names.at(i)) * sizeof(double));
+#endif
+                params.push_back(mem_p);
+                params_info.push_back(iris_rw);
+                pointers++;
+                break;
+            }
+            case two:
+            {
+                // double * temp = new double[std::get<1>(device_names.at(i))];
+                // temps.push_back(temp);
                 iris_mem * mem_p = new iris_mem;
 #if 1 
                 iris_mem_create(std::get<1>(device_names.at(i)) * sizeof(double), mem_p);
@@ -320,8 +367,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         iris_task_h2d_full(task, mem_Y, args.at(0));
         iris_task_h2d_full(task, mem_X, args.at(1));
         iris_task_h2d_full(task, mem_sym, args.at(2));
-        for(int j = 0; j < temps.size(); j++)
-            iris_task_h2d_full(task, ((*(iris_mem*)params.at(j+3))), temps.at(j));
+        for(int j = 0; j < data.size(); j++)
+            iris_task_h2d_full(task, ((*(iris_mem*)params.at(j+3))), data.at(j));
 #endif    
         std::cout << "grid: " << kernel_params[i*6] <<  ", " << kernel_params[i*6+1] << ", " << kernel_params[i*6+2] << std::endl;
         std::cout << "block: " << kernel_params[i*6+3] <<  ", " << kernel_params[i*6+4] <<  ", " << kernel_params[i*6+5] << std::endl;
@@ -339,8 +386,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 #endif
 
 #if 1
-        for(int j = 0; j < temps.size(); j++)
-            iris_task_d2h_full(task, ((*(iris_mem*)params.at(j+3))), temps.at(j));
+        for(int j = 0; j < data.size(); j++)
+            iris_task_d2h_full(task, ((*(iris_mem*)params.at(j+3))), data.at(j));
 #endif
         iris_task_submit(task, iris_roundrobin, NULL, 1);
     }

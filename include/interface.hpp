@@ -173,16 +173,16 @@ void getImportAndConfIRIS(std::string arch) {
 
 
 void printIRISBackend(std::string name, std::vector<int> sizes, std::string arch) {
-    std::cout << "if 1 = 1 then opts:=conf.getOpts(transform);\ntt:= opts.tagIt(transform);\nif(IsBound(fftx_includes)) then opts.includes:=fftx_includes;fi;\nc:=opts.fftxGen(tt);\n fi;" << std::endl;
+    std::cout << "if 1 = 1 then opts:=conf.getOpts(transform);\ntt:= opts.tagIt(transform);\nif(IsBound(fftx_includes)) then opts.includes:=fftx_includes;fi;\nc:=opts.fftxGen(tt);\nc2:=opts.fftxGen(tt);\n fi;" << std::endl;
     std::cout << "GASMAN(\"collect\");" << std::endl;
     if(arch == "cuda") {
         std::cout << "PrintTo(\"kernel.cu\", PrintIRISJIT(c,opts));" << std::endl;
-        std::cout << "PrintTo(\"kerneljit.cu\", PrintHIPJIT(c,opts));" << std::endl;
-        std::cout << "PrintHIPJIT(c,opts);\n";
+        std::cout << "PrintTo(\"kerneljit.cu\", PrintIRISMETAJIT(c2,opts));" << std::endl;
+        std::cout << "PrintIRISMETAJIT(c2,opts);\n";
     } else if(arch == "hip") {
         std::cout << "PrintTo(\"kernel.hip.cpp\", PrintIRISJIT(c,opts));" << std::endl;
-        std::cout << "PrintTo(\"kerneljit.hip.cpp\", PrintHIPJIT(c,opts));" << std::endl;
-        std::cout << "PrintHIPJIT(c,opts);\n";
+        std::cout << "PrintTo(\"kerneljit.hip.cpp\", PrintIRISMETAJIT(c2,opts));" << std::endl;
+        std::cout << "PrintIRISMETAJIT(c2,opts);\n";
     } else
         std::cout << "PrintTo(\"kernel.openmp.c\", opts.prettyPrint(c));" << std::endl;
 }
@@ -287,6 +287,8 @@ std::string FFTXProblem::semantics2() {
     close(p[0]);
     result.erase(result.size()-8);
     return result;
+    // exit(0);
+    // return nullptr;
     // return "cuda";
 }
 
