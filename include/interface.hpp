@@ -287,7 +287,7 @@ std::string FFTXProblem::semantics2() {
     if(getIRISARCH() == "cuda") {
         std::ofstream kernel, metakernel;
         kernel.open("kernel.cu");
-        kernel << result.substr(result.find(f)+20);
+        kernel << result.substr(result.find(f)+18);
         kernel.close();
         metakernel.open("kerneljit.cu");
         metakernel << result;
@@ -295,7 +295,7 @@ std::string FFTXProblem::semantics2() {
     } else if(getIRISARCH() == "hip") {
         std::ofstream kernel, metakernel;
         kernel.open("kernel.hip.cpp");
-        kernel << result.substr(result.find(f)+20);
+        kernel << result.substr(result.find(f)+18);
         kernel.close();
         metakernel.open("kerneljit.hip.cpp");
         metakernel << result;
