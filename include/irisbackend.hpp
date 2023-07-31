@@ -220,6 +220,7 @@ void Executor::parseDataStructure(std::string input) {
                             double * data1 = new double[size];
                             // memset(data1, 0, size * sizeof(double));
                             data.push_back(data1);
+                            data_lengths.push_back(size); 
                         }
                         else {
                             double * data1 = new double[words.size()-4];

@@ -173,16 +173,12 @@ void getImportAndConfIRIS(std::string arch) {
 
 
 void printIRISBackend(std::string name, std::vector<int> sizes, std::string arch) {
-    std::cout << "if 1 = 1 then opts:=conf.getOpts(transform);\ntt:= opts.tagIt(transform);\nif(IsBound(fftx_includes)) then opts.includes:=fftx_includes;fi;\nc:=opts.fftxGen(tt);\nc2:=opts.fftxGen(tt);\n fi;" << std::endl;
+    std::cout << "if 1 = 1 then opts:=conf.getOpts(transform);\ntt:= opts.tagIt(transform);\nif(IsBound(fftx_includes)) then opts.includes:=fftx_includes;fi;\nc:=opts.fftxGen(tt);\nfi;" << std::endl;
     std::cout << "GASMAN(\"collect\");" << std::endl;
     if(arch == "cuda") {
-        std::cout << "PrintTo(\"kernel.cu\", PrintIRISJIT(c,opts));" << std::endl;
-        std::cout << "PrintTo(\"kerneljit.cu\", PrintIRISMETAJIT(c2,opts));" << std::endl;
-        std::cout << "PrintIRISMETAJIT(c2,opts);\n";
+        std::cout << "PrintIRISMETAJIT(c,opts);\n";
     } else if(arch == "hip") {
-        std::cout << "PrintTo(\"kernel.hip.cpp\", PrintIRISJIT(c,opts));" << std::endl;
-        std::cout << "PrintTo(\"kerneljit.hip.cpp\", PrintIRISMETAJIT(c2,opts));" << std::endl;
-        std::cout << "PrintIRISMETAJIT(c2,opts);\n";
+        std::cout << "PrintIRISMETAJIT(c,opts);\n";
     } else
         std::cout << "PrintTo(\"kernel.openmp.c\", opts.prettyPrint(c));" << std::endl;
 }
@@ -285,7 +281,34 @@ std::string FFTXProblem::semantics2() {
     std::string result = exec(tmp.c_str());
     restore_input(save_stdin);
     close(p[0]);
+    result = result.substr(result.find("spiral> JIT BEGIN"));
     result.erase(result.size()-8);
+    std::string f("------------------");
+    if(getIRISARCH() == "cuda") {
+        std::ofstream kernel, metakernel;
+        kernel.open("kernel.cu");
+        kernel << result.substr(result.find(f)+20);
+        kernel.close();
+        metakernel.open("kerneljit.cu");
+        metakernel << result;
+        metakernel.close();
+    } else if(getIRISARCH() == "hip") {
+        std::ofstream kernel, metakernel;
+        kernel.open("kernel.hip.cpp");
+        kernel << result.substr(result.find(f)+20);
+        kernel.close();
+        metakernel.open("kerneljit.hip.cpp");
+        metakernel << result;
+        metakernel.close();
+    } else {
+        std::ofstream kernel, metakernel;
+        kernel.open("kernel.openmp.c");
+        kernel << result;
+        kernel.close();
+        // metakernel.open("kerneljit.hip.cpp");
+        // metakernel << result;
+        // metakernel.close();
+    }
     return result;
     // exit(0);
     // return nullptr;
