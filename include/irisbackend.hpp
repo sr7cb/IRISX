@@ -381,7 +381,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 #endif    
         std::cout << "grid: " << kernel_params[i*6] <<  ", " << kernel_params[i*6+1] << ", " << kernel_params[i*6+2] << std::endl;
         std::cout << "block: " << kernel_params[i*6+3] <<  ", " << kernel_params[i*6+4] <<  ", " << kernel_params[i*6+5] << std::endl;
-        std::vector<size_t> grid{(size_t)kernel_params[i*6], (size_t)kernel_params[i*6+1], (size_t)kernel_params[i*6+2]};
+        std::vector<size_t> grid{(size_t)kernel_params[i*6]*kernel_params[i*6+3], (size_t)kernel_params[i*6+1]*kernel_params[i*6+4], (size_t)kernel_params[i*6+2]*kernel_params[i*6+5]};
         std::vector<size_t> block{(size_t)kernel_params[i*6+3], (size_t)kernel_params[i*6+4], (size_t)kernel_params[i*6+5]};
         //size_t grid = kernel_params[i*6] * kernel_params[i*6+1] * kernel_params[i*6+2];
         //size_t block = kernel_params[i*6+3] * kernel_params[i*6+4] * kernel_params[i*6+5];
