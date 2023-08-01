@@ -28,11 +28,7 @@
 #include <regex>
 #pragma once
 
-#if defined ( PRINTDEBUG )
-#define DEBUGOUT 1
-#else
 #define DEBUGOUT 0
-#endif
 
 // std::string getIRISARCH() {
 //     const char * tmp2 = std::getenv("IRIS_ARCHS");
@@ -248,7 +244,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
     iris::Platform platform;
     platform.init(NULL, NULL, true);
     size_t size = sizes.at(0) * sizes.at(1) * sizes.at(2);
-    //if ( DEBUGOUT) {
+    if ( DEBUGOUT) {
         std::cout << "In init and launch" << std::endl;
         std::cout << "size " << size << std::endl;
         std::cout << "start\n";
@@ -270,7 +266,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         //     }
         // }
         // exit(0);
-    //}
+    }
     iris_mem mem_X;
     iris_mem mem_Y;
     iris_mem mem_sym;
@@ -379,13 +375,12 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
             iris_task_h2d_full(task, ((*(iris_mem*)params.at(j+3))), data.at(j));
 #endif  
         if(getIRISARCH() == "cuda" || getIRISARCH() == "hip") {
-            std::cout << "grid: " << kernel_params[i*6] <<  ", " << kernel_params[i*6+1] << ", " << kernel_params[i*6+2] << std::endl;
-            std::cout << "block: " << kernel_params[i*6+3] <<  ", " << kernel_params[i*6+4] <<  ", " << kernel_params[i*6+5] << std::endl;
+            if(DEBUGOUT) {
+                std::cout << "grid: " << kernel_params[i*6] <<  ", " << kernel_params[i*6+1] << ", " << kernel_params[i*6+2] << std::endl;
+                std::cout << "block: " << kernel_params[i*6+3] <<  ", " << kernel_params[i*6+4] <<  ", " << kernel_params[i*6+5] << std::endl;
+            }
             std::vector<size_t> grid{(size_t)kernel_params[i*6]*kernel_params[i*6+3], (size_t)kernel_params[i*6+1]*kernel_params[i*6+4], (size_t)kernel_params[i*6+2]*kernel_params[i*6+5]};
             std::vector<size_t> block{(size_t)kernel_params[i*6+3], (size_t)kernel_params[i*6+4], (size_t)kernel_params[i*6+5]};
-            //size_t grid = kernel_params[i*6] * kernel_params[i*6+1] * kernel_params[i*6+2];
-            //size_t block = kernel_params[i*6+3] * kernel_params[i*6+4] * kernel_params[i*6+5];
-            //std::cout << "launching: " << grid << ", " << block << std::endl;
             iris_task_kernel(task, kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), 3+pointers, params.data(), params_info.data());
         } else{
             iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, &size, NULL, 3+pointers, params.data(), params_info.data());

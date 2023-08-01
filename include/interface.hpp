@@ -153,53 +153,25 @@ void getImportAndConfIRIS(std::string arch) {
         std::cout << "conf := LocalConfig.fftx.confGPU();" << std::endl;
     else if(arch == "hip")
         std::cout << "conf := FFTXGlobals.defaultHIPConf();" << std::endl;
+    else if(arch == "openmp")
+        std::cout << "conf := FFTXGlobals.defaultConf();" << std::endl;
     else
         std::cout << "conf := FFTXGlobals.defaultConf();" << std::endl;
+
 }
-
-// void getImportAndConf() {
-//     std::cout << "Load(fftx);\nImportAll(fftx);\n";
-//     #if (defined FFTX_HIP || FFTX_CUDA)
-//     std::cout << "ImportAll(simt);\nLoad(jit);\nImport(jit);\n";
-//     #endif
-//     #if defined FFTX_HIP 
-//     std::cout << "conf := FFTXGlobals.defaultHIPConf();\n";
-//     #elif defined FFTX_CUDA 
-//     std::cout << "conf := LocalConfig.fftx.confGPU();\n";
-//     #else
-//     std::cout << "conf := LocalConfig.fftx.defaultConf();\n";
-//     #endif
-// }
-
 
 void printIRISBackend(std::string name, std::vector<int> sizes, std::string arch) {
     std::cout << "if 1 = 1 then opts:=conf.getOpts(transform);\ntt:= opts.tagIt(transform);\nif(IsBound(fftx_includes)) then opts.includes:=fftx_includes;fi;\nc:=opts.fftxGen(tt);\nfi;" << std::endl;
     std::cout << "GASMAN(\"collect\");" << std::endl;
     if(arch == "cuda") {
-        std::cout << "PrintIRISMETAJIT(c,opts);\n";
+        std::cout << "PrintIRISMETAJIT(c,opts);" << std::endl;
     } else if(arch == "hip") {
-        std::cout << "PrintIRISMETAJIT(c,opts);\n";
+        std::cout << "PrintIRISMETAJIT(c,opts);\n" << std::endl;
+    } else if(arch == "openmp") {
+        std::cout << "opts.prettyPrint(c);" << std::endl;
     } else {
-        // std::cout << "PrintTo(\"kernel.openmp.c\", opts.prettyPrint(c));" << std::endl;
-        // std::cout << "Append(opts.includes, [iris/iris_openmp.h]);" << std::endl;
         std::cout << "opts.prettyPrint(c);" << std::endl;
     }
-}
-
-void printJITBackend(std::string name, std::vector<int> sizes) {
-    std::string tmp = getFFTX();
-    std::cout << "if 1 = 1 then opts:=conf.getOpts(transform);\ntt:= opts.tagIt(transform);\nif(IsBound(fftx_includes)) then opts.includes:=fftx_includes;fi;\nc:=opts.fftxGen(tt);\n fi;\n";
-    std::cout << "GASMAN(\"collect\");\n";
-    #if defined FFTX_HIP
-        std::cout << "PrintTo(\"" << tmp << "cache_" << name << "_" << sizes.at(0) << "x" << sizes.at(1) << "x" << sizes.at(2) << "_HIP" << ".txt\", PrintHIPJIT(c,opts));\n"; 
-        std::cout << "PrintHIPJIT(c,opts);\n";
-    #elif defined FFTX_CUDA 
-       std::cout << "PrintTo(\"" << tmp << "cache_" << name << "_" << sizes.at(0) << "x" << sizes.at(1) << "x" << sizes.at(2) << "_CUDA" << ".txt\", PrintJIT2(c,opts));\n";   
-       std::cout << "PrintJIT2(c,opts);\n";
-    #else
-        std::cout << "PrintTo(\"" << tmp << "cache_" << name << "_" << sizes.at(0) << "x" << sizes.at(1) << "x" << sizes.at(2) << "_CPU" << ".txt\", opts.prettyPrint(c));\n"; 
-        std::cout << "opts.prettyPrint(c);\n";
-    #endif
 }
 
 class FFTXProblem {
@@ -296,6 +268,7 @@ std::string FFTXProblem::semantics2() {
         metakernel << result;
         metakernel.close();
     } else if(getIRISARCH() == "hip") {
+        result.erase(result.size()-8);
         result = result.substr(result.find("spiral> JIT BEGIN"));
         std::ofstream kernel, metakernel;
         kernel.open("kernel.hip.cpp");
@@ -304,7 +277,7 @@ std::string FFTXProblem::semantics2() {
         metakernel.open("kerneljit.hip.cpp");
         metakernel << result;
         metakernel.close();
-    } else {
+    } else if(getIRISARCH() == "openmp") {
         result = result.substr(result.find("#include"));
         std::ofstream kernel, metakernel;
         kernel.open("kernel_openmp.c");
@@ -318,6 +291,9 @@ std::string FFTXProblem::semantics2() {
         // metakernel.open("kerneljit.hip.cpp");
         // metakernel << result;
         // metakernel.close();
+    } else{
+        std::cout << "not supported arch" << std::endl;
+        exit(-1);
     }
     // std::cout << result << std::endl;
     return result;
@@ -366,8 +342,10 @@ void FFTXProblem::transform(){
                 oss << "kerneljit.cu";
             else if(getIRISARCH() == "hip")
                 oss << "kerneljit.hip.cpp";
-            else
+            else if(getIRISARCH() == "openmp") 
                 oss << "kernel_openmp.c";
+            else
+                oss << "borken";
             std::string file_name = oss.str();
             std::ifstream ifs ( file_name );
             if(ifs) {
