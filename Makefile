@@ -17,4 +17,4 @@ kernel.ptx: kernel.cu
 	nvcc -ptx $^
 
 clean:
-	-rm *.out *.cu *.ptx *.hip.cpp *.hip
+	-rm *.out *.cu *.ptx *.hip.cpp *.hip *_openmp.c *.so

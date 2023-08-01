@@ -154,7 +154,7 @@ void getImportAndConfIRIS(std::string arch) {
     else if(arch == "hip")
         std::cout << "conf := FFTXGlobals.defaultHIPConf();" << std::endl;
     else
-        std::cout << "conf := LocalConfig.fftx.defaultConf();" << std::endl;
+        std::cout << "conf := FFTXGlobals.defaultConf();" << std::endl;
 }
 
 // void getImportAndConf() {
@@ -179,8 +179,11 @@ void printIRISBackend(std::string name, std::vector<int> sizes, std::string arch
         std::cout << "PrintIRISMETAJIT(c,opts);\n";
     } else if(arch == "hip") {
         std::cout << "PrintIRISMETAJIT(c,opts);\n";
-    } else
-        std::cout << "PrintTo(\"kernel.openmp.c\", opts.prettyPrint(c));" << std::endl;
+    } else {
+        // std::cout << "PrintTo(\"kernel.openmp.c\", opts.prettyPrint(c));" << std::endl;
+        // std::cout << "Append(opts.includes, [iris/iris_openmp.h]);" << std::endl;
+        std::cout << "opts.prettyPrint(c);" << std::endl;
+    }
 }
 
 void printJITBackend(std::string name, std::vector<int> sizes) {
@@ -281,10 +284,10 @@ std::string FFTXProblem::semantics2() {
     std::string result = exec(tmp.c_str());
     restore_input(save_stdin);
     close(p[0]);
-    result = result.substr(result.find("spiral> JIT BEGIN"));
     result.erase(result.size()-8);
     std::string f("------------------");
     if(getIRISARCH() == "cuda") {
+        result = result.substr(result.find("spiral> JIT BEGIN"));
         std::ofstream kernel, metakernel;
         kernel.open("kernel.cu");
         kernel << result.substr(result.find(f)+18);
@@ -293,6 +296,7 @@ std::string FFTXProblem::semantics2() {
         metakernel << result;
         metakernel.close();
     } else if(getIRISARCH() == "hip") {
+        result = result.substr(result.find("spiral> JIT BEGIN"));
         std::ofstream kernel, metakernel;
         kernel.open("kernel.hip.cpp");
         kernel << result.substr(result.find(f)+18);
@@ -301,14 +305,21 @@ std::string FFTXProblem::semantics2() {
         metakernel << result;
         metakernel.close();
     } else {
+        result = result.substr(result.find("#include"));
         std::ofstream kernel, metakernel;
-        kernel.open("kernel.openmp.c");
+        kernel.open("kernel_openmp.c");
+        kernel << "#include <stdio.h>\n";
+        kernel << "#include \"include/kernel_openmp.h\"\n"; 
         kernel << result;
+        kernel << "\n";
+        kernel << "int iris_spiral_kernel(double *Y, double *X, double *sym, size_t _off, size_t _ndr) {\n";
+        kernel << "init_" << name << "_spiral();\n" << name << "_spiral(Y,X,sym);\n" << "destroy_" << name << "_spiral();\nreturn IRIS_SUCCESS;\n}";
         kernel.close();
         // metakernel.open("kerneljit.hip.cpp");
         // metakernel << result;
         // metakernel.close();
     }
+    // std::cout << result << std::endl;
     return result;
     // exit(0);
     // return nullptr;
@@ -356,7 +367,7 @@ void FFTXProblem::transform(){
             else if(getIRISARCH() == "hip")
                 oss << "kerneljit.hip.cpp";
             else
-                oss << "kerneljit.cu";
+                oss << "kernel_openmp.c";
             std::string file_name = oss.str();
             std::ifstream ifs ( file_name );
             if(ifs) {

@@ -34,38 +34,37 @@
 #define DEBUGOUT 0
 #endif
 
-static constexpr auto cmake_script{
-R"(
-cmake_minimum_required ( VERSION 3.14 )
-set ( CMAKE_BUILD_TYPE Release  CACHE STRING "Debug, Release, RelWithDebInfo, MinSizeRel" )
-project ( tmplib LANGUAGES C CXX )
+// std::string getIRISARCH() {
+//     const char * tmp2 = std::getenv("IRIS_ARCHS");
+//     std::string tmp(tmp2 ? tmp2 : "");
+//     if (tmp.empty()) {
+//         std::cout << "[ERROR] No such variable found, please set IRIS_ARCHS env variable" << std::endl;
+//         exit(-1);
+//     }
+//     return tmp;
+// }
 
-if ( DEFINED ENV{SPIRAL_HOME} )
-    set ( SPIRAL_SOURCE_DIR $ENV{SPIRAL_HOME} )
-else ()
-    if ( "x${SPIRAL_HOME}" STREQUAL "x" )
-        message ( FATAL_ERROR "SPIRAL_HOME environment variable undefined and not specified on command line" )
-    endif ()
-    set ( SPIRAL_SOURCE_DIR ${SPIRAL_HOME} )
-endif ()
+std::string getSPIRALHOME() {
+    const char * tmp2 = std::getenv("SPIRAL_HOME");//required >8.3.1
+    std::string tmp(tmp2 ? tmp2 : "");
+    if (tmp.empty()) {
+        std::cout << "[ERROR] No such variable found, please download and set SPIRAL_HOME env variable" << std::endl;
+        exit(-1);
+    }    
+    return tmp;
+}
 
-if ( APPLE )
-    if ( ${CMAKE_OSX_ARCHITECTURES} MATCHES "arm64" OR ${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64.*" )
-	    set ( ADDL_COMPILE_FLAGS -arch arm64 )
-    elseif ( ${CMAKE_OSX_ARCHITECTURES} MATCHES "x86_64" OR ${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64.*")
-	    set ( ADDL_COMPILE_FLAGS -arch x86_64 )
-    endif ()
-endif ()
+std::string getIRIS() {
+    const char * tmp2 = std::getenv("IRIS");//required >8.3.1
+    std::string tmp(tmp2 ? tmp2 : "");
+    if (tmp.empty()) {
+        std::cout << "[ERROR] No such variable found, please download and set SPIRAL_HOME env variable" << std::endl;
+        exit(-1);
+    }      
+    return tmp;
+}
 
-add_library                ( tmp SHARED spiral_generated.c )
-target_include_directories ( tmp PRIVATE ${SPIRAL_SOURCE_DIR}/namespaces )
-target_compile_options     ( tmp PRIVATE -shared -fPIC ${_addl_options} )
-
-if ( WIN32 )
-    set_property    ( TARGET tmp PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON )
-endif ()
-)"};
-
+std::string getIRISARCH();
 
 int redirect_input(int);
 void restore_input(int);
@@ -378,16 +377,19 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         iris_task_h2d_full(task, mem_sym, args.at(2));
         for(int j = 0; j < data.size(); j++)
             iris_task_h2d_full(task, ((*(iris_mem*)params.at(j+3))), data.at(j));
-#endif    
-        std::cout << "grid: " << kernel_params[i*6] <<  ", " << kernel_params[i*6+1] << ", " << kernel_params[i*6+2] << std::endl;
-        std::cout << "block: " << kernel_params[i*6+3] <<  ", " << kernel_params[i*6+4] <<  ", " << kernel_params[i*6+5] << std::endl;
-        std::vector<size_t> grid{(size_t)kernel_params[i*6]*kernel_params[i*6+3], (size_t)kernel_params[i*6+1]*kernel_params[i*6+4], (size_t)kernel_params[i*6+2]*kernel_params[i*6+5]};
-        std::vector<size_t> block{(size_t)kernel_params[i*6+3], (size_t)kernel_params[i*6+4], (size_t)kernel_params[i*6+5]};
-        //size_t grid = kernel_params[i*6] * kernel_params[i*6+1] * kernel_params[i*6+2];
-        //size_t block = kernel_params[i*6+3] * kernel_params[i*6+4] * kernel_params[i*6+5];
-        //std::cout << "launching: " << grid << ", " << block << std::endl;
-        iris_task_kernel(task, kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), 3+pointers, params.data(), params_info.data());
-
+#endif  
+        if(getIRISARCH() == "cuda" || getIRISARCH() == "hip") {
+            std::cout << "grid: " << kernel_params[i*6] <<  ", " << kernel_params[i*6+1] << ", " << kernel_params[i*6+2] << std::endl;
+            std::cout << "block: " << kernel_params[i*6+3] <<  ", " << kernel_params[i*6+4] <<  ", " << kernel_params[i*6+5] << std::endl;
+            std::vector<size_t> grid{(size_t)kernel_params[i*6]*kernel_params[i*6+3], (size_t)kernel_params[i*6+1]*kernel_params[i*6+4], (size_t)kernel_params[i*6+2]*kernel_params[i*6+5]};
+            std::vector<size_t> block{(size_t)kernel_params[i*6+3], (size_t)kernel_params[i*6+4], (size_t)kernel_params[i*6+5]};
+            //size_t grid = kernel_params[i*6] * kernel_params[i*6+1] * kernel_params[i*6+2];
+            //size_t block = kernel_params[i*6+3] * kernel_params[i*6+4] * kernel_params[i*6+5];
+            //std::cout << "launching: " << grid << ", " << block << std::endl;
+            iris_task_kernel(task, kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), 3+pointers, params.data(), params_info.data());
+        } else{
+            iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, &size, NULL, 3+pointers, params.data(), params_info.data());
+        }
 #if 0
         iris_task_d2h_full(task, mem_Y, args.at(0));
 #else
@@ -410,7 +412,11 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 
 
 void Executor::execute(std::string input, std::string arch) {
-    parseDataStructure ( input );
+    if(getIRISARCH() == "cuda" || getIRISARCH() == "hip") {
+        parseDataStructure ( input );
+    } else {
+        kernel_names.push_back("iris_spiral_kernel");
+    }
     if(arch == "cuda") {
         std::cout << "in cuda code portion\n";
         system("nvcc -ptx kernel.cu");
@@ -420,7 +426,11 @@ void Executor::execute(std::string input, std::string arch) {
         system("hipcc --genco -o kernel.hip kernel.hip.cpp");
     }
     else {
-        system("gcc -I$(IRIS)/include/ -O3 -std=c99 -fopenmp -fPIC -shared -I. -o kernel.openmp.so kernel.openmp.c");
+        std::string command("gcc");
+        command.append(" -I" + getIRIS() + "/include/" + " -I" + getSPIRALHOME() + "/namespaces/");
+        command.append(" -O3 -std=c99 -fopenmp -march=native -mavx2 -fPIC -shared -I. -o kernel.openmp.so kernel_openmp.c");
+        std::cout << command << std::endl;
+        system(command.c_str());
     }
 }
 
