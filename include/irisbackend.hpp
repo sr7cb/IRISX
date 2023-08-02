@@ -372,6 +372,9 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
     auto start = std::chrono::high_resolution_clock::now();
 
     for(int i = 0; i < kernel_names.size(); i++) {
+        std::cout << "number of kernels is: " << kernel_names.size() << std::endl;
+                std::cout << "kernel name: " << kernel_names.at(i) << std::endl;
+
         iris_task task;
         iris_task_create(&task);
 
@@ -382,7 +385,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         for(int j = 0; j < data.size(); j++)
             iris_task_h2d_full(task, ((*(iris_mem*)params.at(j+3))), data.at(j));
 #endif  
-        if(getIRISARCH() == "cuda" || getIRISARCH() == "hip") {
+        if((getIRISARCH().find("cuda") != std::string::npos || getIRISARCH().find("hip") != std::string::npos) && !findOpenMP()) {
             if(DEBUGOUT) {
                 std::cout << "grid: " << kernel_params[i*6] <<  ", " << kernel_params[i*6+1] << ", " << kernel_params[i*6+2] << std::endl;
                 std::cout << "block: " << kernel_params[i*6+3] <<  ", " << kernel_params[i*6+4] <<  ", " << kernel_params[i*6+5] << std::endl;
@@ -403,7 +406,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         for(int j = 0; j < data.size(); j++)
             iris_task_d2h_full(task, ((*(iris_mem*)params.at(j+3))), data.at(j));
 #endif
-        iris_task_submit(task, iris_any, NULL, 1);
+        iris_task_submit(task, iris_gpu, NULL, 1);
     }
 
     auto stop = std::chrono::high_resolution_clock::now();
@@ -426,7 +429,7 @@ void Executor::execute() {
     std::string word;
     while (!ss.eof()) {
         std::ostringstream oss;
-        std::getline(ss, word, ',');
+        std::getline(ss, word, ':');
         std::cout << word << std::endl;
         if(word == "cuda" && flag == "")
             oss << "kerneljit.cu";
@@ -455,10 +458,12 @@ void Executor::execute() {
 
 void Executor::execute2(std::string input, std::string arch) {
     std::cout << "arch in execute2 " << arch << std::endl;
-    if(getIRISARCH() == "cuda" || getIRISARCH() == "hip" && parsed == 0 && !findOpenMP()) {
+    if((getIRISARCH() == "cuda" || getIRISARCH() == "hip") && parsed == 0 && !findOpenMP()) {
         parsed = parseDataStructure ( input );
     } else {
-        kernel_names.push_back("iris_spiral_kernel");
+        std::cout << "got into else branch for 1 kernel\n";
+        if(kernel_names.size() == 0)
+            kernel_names.push_back("iris_spiral_kernel");
     }
     if(arch == "cuda") {
         std::cout << "in cuda code portion\n";
@@ -474,7 +479,7 @@ void Executor::execute2(std::string input, std::string arch) {
             command.append("nvcc");
             command.append(" -I" + getIRIS() + "/include/" + " -I" + getSPIRALHOME() + "/namespaces/ -I.");
             command.append(" -O3");
-            command.append(" -Xcompiler -fPIC -shared -o kernel.host2cuda.so kernel_host2cuda.cu -lcuda -lcudart");
+            command.append(" --compiler-options \'-fPIC\' -shared -o kernel.host2cuda.so kernel_host2cuda.cu -lcuda -lcudart");
         }
         else if(arch == "hipopenmp") {
             command.append("hipcc");

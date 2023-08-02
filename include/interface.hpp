@@ -302,7 +302,7 @@ std::string FFTXProblem::semantics2(std::string arch) {
         kernel << "#include \"include/kernel_host2cuda.h\"\n"; 
         kernel << result;
         kernel << "\n";
-        kernel << "int iris_spiral_kernel(double *Y, double *X, double *sym, size_t _off, size_t _ndr) {\n";
+        kernel << "int iris_spiral_kernel_host2cuda(double *Y, double *X, double *sym, size_t _off, size_t _ndr) {\n";
         kernel << "init_" << name << "_spiral();\n" << name << "_spiral(Y,X,sym);\n" << "destroy_" << name << "_spiral();\nreturn IRIS_SUCCESS;\n}";
         kernel.close();
         // metakernel.open("kerneljit.hip.cpp");
@@ -316,7 +316,7 @@ std::string FFTXProblem::semantics2(std::string arch) {
         kernel << "#include \"include/kernel_host2hip.h\"\n"; 
         kernel << result;
         kernel << "\n";
-        kernel << "int iris_spiral_kernel(double *Y, double *X, double *sym, size_t _off, size_t _ndr) {\n";
+        kernel << "int iris_spiral_kernel_host2hip(double *Y, double *X, double *sym, size_t _off, size_t _ndr) {\n";
         kernel << "init_" << name << "_spiral();\n" << name << "_spiral(Y,X,sym);\n" << "destroy_" << name << "_spiral();\nreturn IRIS_SUCCESS;\n}";
         kernel.close();
         // metakernel.open("kerneljit.hip.cpp");
@@ -377,7 +377,7 @@ void FFTXProblem::transform(){
             std::string word;
             while (!ss.eof()) {
                 std::ostringstream oss;
-                std::getline(ss, word, ',');
+                std::getline(ss, word, ':');
                 std::cout << "looking for arch " << word << std::endl;
                 if(word == "cuda" && flag == "")
                     oss << "kerneljit.cu";

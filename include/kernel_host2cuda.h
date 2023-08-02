@@ -85,7 +85,7 @@ int iris_setmem(int idx, void *mem, int size) {
 
 int iris_kernel(const char* name) {
     iris_kernel_lock();
-
+        printf("does it come here!!!!\n%s\n", name);
          if (strcmp(name, "iris_spiral_kernel") == 0) {
                  iris_kernel_idx = 1;
                  return IRIS_SUCCESS;
@@ -98,6 +98,7 @@ int iris_spiral_kernel_host2cuda(
         double *, double *, double *, size_t, size_t);
 
 int iris_launch(int dim, size_t off, size_t ndr) {
+        printf("the kernel should be launched!!!\n %d\n", iris_kernel_idx);
         switch(iris_kernel_idx) {
 
                         case 1: iris_spiral_kernel_host2cuda(
