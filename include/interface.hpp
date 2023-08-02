@@ -297,7 +297,7 @@ std::string FFTXProblem::semantics2(std::string arch) {
     } else if(arch == "cudaopenmp") {
         result = result.substr(result.find("#include"));
         std::ofstream kernel, metakernel;
-        kernel.open("kernel_host2cuda.c");
+        kernel.open("kernel_host2cuda.cu");
         kernel << "#include <stdio.h>\n";
         kernel << "#include \"include/kernel_host2cuda.h\"\n"; 
         kernel << result;
@@ -382,7 +382,7 @@ void FFTXProblem::transform(){
                 if(word == "cuda" && flag == "")
                     oss << "kerneljit.cu";
                 else if(word == "cuda" && flag == "openmp") 
-                    oss << "kernel_host2cuda.c";
+                    oss << "kernel_host2cuda.cu";
                 else if(word == "hip" && flag == "")
                     oss << "kerneljit.hip.cpp";
                 else if(word == "hip" && flag == "openmp")

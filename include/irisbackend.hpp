@@ -403,7 +403,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         for(int j = 0; j < data.size(); j++)
             iris_task_d2h_full(task, ((*(iris_mem*)params.at(j+3))), data.at(j));
 #endif
-        iris_task_submit(task, iris_gpu, NULL, 1);
+        iris_task_submit(task, iris_any, NULL, 1);
     }
 
     auto stop = std::chrono::high_resolution_clock::now();
@@ -427,10 +427,11 @@ void Executor::execute() {
     while (!ss.eof()) {
         std::ostringstream oss;
         std::getline(ss, word, ',');
+        std::cout << word << std::endl;
         if(word == "cuda" && flag == "")
             oss << "kerneljit.cu";
         else if(word == "cuda" && flag == "openmp") 
-            oss << "kernel_host2cuda.c";
+            oss << "kernel_host2cuda.cu";
         else if(word == "hip" && flag == "")
             oss << "kerneljit.hip.cpp";
         else if(word == "hip" && flag == "openmp")
@@ -453,6 +454,7 @@ void Executor::execute() {
 }
 
 void Executor::execute2(std::string input, std::string arch) {
+    std::cout << "arch in execute2 " << arch << std::endl;
     if(getIRISARCH() == "cuda" || getIRISARCH() == "hip" && parsed == 0 && !findOpenMP()) {
         parsed = parseDataStructure ( input );
     } else {
@@ -467,15 +469,22 @@ void Executor::execute2(std::string input, std::string arch) {
         system("hipcc --genco -o kernel.hip kernel.hip.cpp");
     }
     else {
-        std::string command("gcc");
-        command.append(" -I" + getIRIS() + "/include/" + " -I" + getSPIRALHOME() + "/namespaces/");
-        command.append(" -O3 -std=c99");
+        std::string command;
         if(arch == "cudaopenmp") {
-            command.append(" -fPIC -shared -I. -o kernel.host2cuda.so kernel_host2cuda.c");
+            command.append("nvcc");
+            command.append(" -I" + getIRIS() + "/include/" + " -I" + getSPIRALHOME() + "/namespaces/ -I.");
+            command.append(" -O3");
+            command.append(" -Xcompiler -fPIC -shared -o kernel.host2cuda.so kernel_host2cuda.cu -lcuda -lcudart");
         }
         else if(arch == "hipopenmp") {
+            command.append("hipcc");
+            command.append(" -I" + getIRIS() + "/include/" + " -I" + getSPIRALHOME() + "/namespaces/");
+            command.append(" -O3 -std=c99");
             command.append(" -fPIC -shared -I. -o kernel.host2hip.so kernel_host2hip.c");
         } else {
+            command.append("gcc");
+            command.append(" -I" + getIRIS() + "/include/" + " -I" + getSPIRALHOME() + "/namespaces/");
+            command.append(" -O3 -std=c99");
             command.append(" -fopenmp -march=native -mavx2 -fPIC -shared -I. -o kernel.openmp.so kernel_openmp.c");
         }
         std::cout << command << std::endl;
