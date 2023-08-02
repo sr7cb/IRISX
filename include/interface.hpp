@@ -26,6 +26,7 @@
 #include <string>
 #include <array>
 #include <chrono>
+#include <bits/stdc++.h>
 // #if defined FFTX_CUDA
 // #include "cudabackend.hpp"
 
@@ -149,9 +150,9 @@ std::string getSPIRAL() {
 void getImportAndConfIRIS(std::string arch) {
     std::cout << "Load(fftx);\nImportAll(fftx);" << std::endl;
     std::cout << "ImportAll(simt);\nLoad(jit);\nImport(jit);"<< std::endl;
-    if(arch == "cuda")
+    if(arch == "cuda" || arch == "cudaopenmp")
         std::cout << "conf := LocalConfig.fftx.confGPU();" << std::endl;
-    else if(arch == "hip")
+    else if(arch == "hip" || arch == "hipopenmp")
         std::cout << "conf := FFTXGlobals.defaultHIPConf();" << std::endl;
     else if(arch == "openmp")
         std::cout << "conf := FFTXGlobals.defaultConf();" << std::endl;
@@ -165,6 +166,7 @@ void printIRISBackend(std::string name, std::vector<int> sizes, std::string arch
     std::cout << "GASMAN(\"collect\");" << std::endl;
     if(arch == "cuda") {
         std::cout << "PrintIRISMETAJIT(c,opts);" << std::endl;
+        // std::cout << "opts.prettyPrint(c);" << std::endl;
     } else if(arch == "hip") {
         std::cout << "PrintIRISMETAJIT(c,opts);\n" << std::endl;
     } else if(arch == "openmp") {
@@ -215,7 +217,7 @@ public:
     void setArgs(const std::vector<void*>& args1);
     void setName(std::string name);
     void transform();
-    std::string semantics2();
+    std::string semantics2(std::string arch);
     virtual void randomProblemInstance() = 0;
     virtual void semantics() = 0;
     float gpuTime;
@@ -238,16 +240,17 @@ void FFTXProblem::setName(std::string name1) {
     name = name1;
 }
 
-std::string FFTXProblem::semantics2() {
+std::string FFTXProblem::semantics2(std::string arch) {
+    std::cout << "this is arch " << arch << std::endl;
     std::string tmp = getSPIRAL();
     int p[2];
     if(pipe(p) < 0)
         std::cout << "pipe failed\n";
     std::stringstream out; 
     std::streambuf *coutbuf = std::cout.rdbuf(out.rdbuf()); //save old buf
-    getImportAndConfIRIS(getIRISARCH());
+    getImportAndConfIRIS(arch);
     semantics();
-    printIRISBackend(name, sizes, getIRISARCH());
+    printIRISBackend(name, sizes, arch);
     std::cout.rdbuf(coutbuf);
     std::string script = out.str();
     int res = write(p[1], script.c_str(), script.size());
@@ -258,7 +261,7 @@ std::string FFTXProblem::semantics2() {
     close(p[0]);
     result.erase(result.size()-8);
     std::string f("------------------");
-    if(getIRISARCH() == "cuda") {
+    if(arch == "cuda") {
         result = result.substr(result.find("spiral> JIT BEGIN"));
         std::ofstream kernel, metakernel;
         kernel.open("kernel.cu");
@@ -267,7 +270,7 @@ std::string FFTXProblem::semantics2() {
         metakernel.open("kerneljit.cu");
         metakernel << result;
         metakernel.close();
-    } else if(getIRISARCH() == "hip") {
+    } else if(arch == "hip") {
         result.erase(result.size()-8);
         result = result.substr(result.find("spiral> JIT BEGIN"));
         std::ofstream kernel, metakernel;
@@ -277,7 +280,7 @@ std::string FFTXProblem::semantics2() {
         metakernel.open("kerneljit.hip.cpp");
         metakernel << result;
         metakernel.close();
-    } else if(getIRISARCH() == "openmp") {
+    } else if(arch == "openmp") {
         result = result.substr(result.find("#include"));
         std::ofstream kernel, metakernel;
         kernel.open("kernel_openmp.c");
@@ -291,7 +294,36 @@ std::string FFTXProblem::semantics2() {
         // metakernel.open("kerneljit.hip.cpp");
         // metakernel << result;
         // metakernel.close();
-    } else{
+    } else if(arch == "cudaopenmp") {
+        result = result.substr(result.find("#include"));
+        std::ofstream kernel, metakernel;
+        kernel.open("kernel_host2cuda.c");
+        kernel << "#include <stdio.h>\n";
+        kernel << "#include \"include/kernel_host2cuda.h\"\n"; 
+        kernel << result;
+        kernel << "\n";
+        kernel << "int iris_spiral_kernel(double *Y, double *X, double *sym, size_t _off, size_t _ndr) {\n";
+        kernel << "init_" << name << "_spiral();\n" << name << "_spiral(Y,X,sym);\n" << "destroy_" << name << "_spiral();\nreturn IRIS_SUCCESS;\n}";
+        kernel.close();
+        // metakernel.open("kerneljit.hip.cpp");
+        // metakernel << result;
+        // metakernel.close();
+    } else if(arch == "hipopenmp") {
+        result = result.substr(result.find("#include"));
+        std::ofstream kernel, metakernel;
+        kernel.open("kernel_host2openmp.c");
+        kernel << "#include <stdio.h>\n";
+        kernel << "#include \"include/kernel_host2hip.h\"\n"; 
+        kernel << result;
+        kernel << "\n";
+        kernel << "int iris_spiral_kernel(double *Y, double *X, double *sym, size_t _off, size_t _ndr) {\n";
+        kernel << "init_" << name << "_spiral();\n" << name << "_spiral(Y,X,sym);\n" << "destroy_" << name << "_spiral();\nreturn IRIS_SUCCESS;\n}";
+        kernel.close();
+        // metakernel.open("kerneljit.hip.cpp");
+        // metakernel << result;
+        // metakernel.close();
+    }
+     else{
         std::cout << "not supported arch" << std::endl;
         exit(-1);
     }
@@ -336,35 +368,51 @@ void FFTXProblem::transform(){
             run(executors.at(sizes));
         }
         else { //check filesystem cache
-            std::ostringstream oss;
             // std::string tmp = getFFTX();
-            if(getIRISARCH() == "cuda")
-                oss << "kerneljit.cu";
-            else if(getIRISARCH() == "hip")
-                oss << "kerneljit.hip.cpp";
-            else if(getIRISARCH() == "openmp") 
-                oss << "kernel_openmp.c";
-            else
-                oss << "borken";
-            std::string file_name = oss.str();
-            std::ifstream ifs ( file_name );
-            if(ifs) {
-                std::cout << "found cached file on disk\n";
-                std::string fcontent ( ( std::istreambuf_iterator<char>(ifs) ),
-                                       ( std::istreambuf_iterator<char>()    ) );
-                Executor e;
-                e.execute(fcontent, getIRISARCH());
-                executors.insert(std::make_pair(sizes, e));
-                run(e);
-            } 
-            else { //generate code at runtime
-                std::cout << "haven't seen size, generating\n";
-                res = semantics2();
-                Executor e;
-                e.execute(res, getIRISARCH());
-                executors.insert(std::make_pair(sizes, e));
-                run(e);
+            std::string flag = "";
+            if(getIRISARCH().find("openmp") != std::string::npos) {
+                flag = "openmp";
             }
+            std::stringstream ss(getIRISARCH());
+            std::string word;
+            while (!ss.eof()) {
+                std::ostringstream oss;
+                std::getline(ss, word, ',');
+                std::cout << "looking for arch " << word << std::endl;
+                if(word == "cuda" && flag == "")
+                    oss << "kerneljit.cu";
+                else if(word == "cuda" && flag == "openmp") 
+                    oss << "kernel_host2cuda.c";
+                else if(word == "hip" && flag == "")
+                    oss << "kerneljit.hip.cpp";
+                else if(word == "hip" && flag == "openmp")
+                    oss << "kernel_host2hip.c";
+                else if(word == "openmp") 
+                    oss << "kernel_openmp.c";
+                else
+                    oss << "borken";
+                std::string file_name = oss.str();
+                std::ifstream ifs ( file_name );
+                if(!ifs) {
+                    std::cout << "arch " << word << " not found" << std::endl;
+                    if(word != "openmp")
+                        res = semantics2(word+flag); 
+                    else
+                        res = semantics2(word);
+                }
+            }
+            Executor e;
+            e.execute();
+            executors.insert(std::make_pair(sizes, e));
+            run(e);
+            // else { //generate code at runtime
+            //     std::cout << "haven't seen size, generating\n";
+            //     res = semantics2();
+            //     Executor e;
+            //     e.execute(res, getIRISARCH());
+            //     executors.insert(std::make_pair(sizes, e));
+            //     run(e);
+            // }
         }
     // }
 }

@@ -62,11 +62,18 @@ std::string getIRIS() {
 
 std::string getIRISARCH();
 
+bool findOpenMP() {
+    if(getIRISARCH().find("openmp") != std::string::npos) {
+        return true;
+    }
+    return false;
+}
 int redirect_input(int);
 void restore_input(int);
 
 class Executor {
     private:
+        int parsed = 0;
         int x;
         enum string_code {
             zero,
@@ -96,9 +103,10 @@ class Executor {
     public:
         string_code hashit(std::string const& inString);
         float initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, std::string name);
-        void execute(std::string file_name, std::string arch);
+        void execute();
+        void execute2(std::string file_name, std::string arch);
         float getKernelTime();
-        void parseDataStructure(std::string input);
+        int parseDataStructure(std::string input);
         //void returnData(std::vector<fftx::array_t<3,std::complex<double>>> &out1);
 };
 
@@ -113,7 +121,7 @@ Executor::string_code Executor::hashit(std::string const& inString) {
     return mone;
 }
 
-void Executor::parseDataStructure(std::string input) {
+int Executor::parseDataStructure(std::string input) {
     std::istringstream stream(input);
     char delim = ' ';
     std::string line;
@@ -236,7 +244,7 @@ void Executor::parseDataStructure(std::string input) {
         kernels += "\n";
     }
     if ( DEBUGOUT ) std::cout << "parsed input\n";
-
+    return 1;
 }
 
 
@@ -395,7 +403,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         for(int j = 0; j < data.size(); j++)
             iris_task_d2h_full(task, ((*(iris_mem*)params.at(j+3))), data.at(j));
 #endif
-        iris_task_submit(task, iris_roundrobin, NULL, 1);
+        iris_task_submit(task, iris_gpu, NULL, 1);
     }
 
     auto stop = std::chrono::high_resolution_clock::now();
@@ -405,10 +413,48 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
     platform.finalize();
 }
 
+void Executor::execute() {
+    if(DEBUGOUT)
+        std::cout << "in execute" << std::endl;
+    std::string flag = "";
+    if(getIRISARCH().find("openmp") != std::string::npos) {
+        flag = "openmp";
+    }
+    if(DEBUGOUT)
+        std::cout << "determined if openmp is provided" << std::endl;
+    std::stringstream ss(getIRISARCH());
+    std::string word;
+    while (!ss.eof()) {
+        std::ostringstream oss;
+        std::getline(ss, word, ',');
+        if(word == "cuda" && flag == "")
+            oss << "kerneljit.cu";
+        else if(word == "cuda" && flag == "openmp") 
+            oss << "kernel_host2cuda.c";
+        else if(word == "hip" && flag == "")
+            oss << "kerneljit.hip.cpp";
+        else if(word == "hip" && flag == "openmp")
+            oss << "kernel_host2hip.c";
+        else if(word == "openmp") 
+            oss << "kernel_openmp.c";
+        else
+            oss << "borken";
+        std::string file_name = oss.str();
+        std::ifstream ifs ( file_name );
+        if(ifs) {
+            std::string fcontent ( ( std::istreambuf_iterator<char>(ifs) ),
+                                    ( std::istreambuf_iterator<char>()    ) );
+            if(word != "openmp")
+                execute2(fcontent, word+flag); 
+            else
+                execute2(fcontent, word);
+        }
+    }
+}
 
-void Executor::execute(std::string input, std::string arch) {
-    if(getIRISARCH() == "cuda" || getIRISARCH() == "hip") {
-        parseDataStructure ( input );
+void Executor::execute2(std::string input, std::string arch) {
+    if(getIRISARCH() == "cuda" || getIRISARCH() == "hip" && parsed == 0 && !findOpenMP()) {
+        parsed = parseDataStructure ( input );
     } else {
         kernel_names.push_back("iris_spiral_kernel");
     }
@@ -423,10 +469,21 @@ void Executor::execute(std::string input, std::string arch) {
     else {
         std::string command("gcc");
         command.append(" -I" + getIRIS() + "/include/" + " -I" + getSPIRALHOME() + "/namespaces/");
-        command.append(" -O3 -std=c99 -fopenmp -march=native -mavx2 -fPIC -shared -I. -o kernel.openmp.so kernel_openmp.c");
+        command.append(" -O3 -std=c99");
+        if(arch == "cudaopenmp") {
+            command.append(" -fPIC -shared -I. -o kernel.host2cuda.so kernel_host2cuda.c");
+        }
+        else if(arch == "hipopenmp") {
+            command.append(" -fPIC -shared -I. -o kernel.host2hip.so kernel_host2hip.c");
+        } else {
+            command.append(" -fopenmp -march=native -mavx2 -fPIC -shared -I. -o kernel.openmp.so kernel_openmp.c");
+        }
         std::cout << command << std::endl;
         system(command.c_str());
     }
+
+
+
 }
 
 float Executor::getKernelTime() {
