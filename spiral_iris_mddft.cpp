@@ -9,7 +9,9 @@
 #include <stdio.h>
 #include <iostream>
 #include <chrono>
-
+#include <typeinfo>
+#include <string>
+#include <cxxabi.h>
 
 static void buildInputBuffer ( double *host_X, std::vector<int> sizes )
 {
@@ -44,11 +46,15 @@ int main(int argc, char** argv) {
   for(int i = 0; i < n*m*k*2; i++) {
     X[i] = 1.0;
   }
+
   // buildInputBuffer(X, sizes);
   std::vector<void*> args{Y,X,sym};
+
   MDDFTProblem mdp(args,sizes,"mddft");
   
   mdp.transform();
+
+  std::cout << "kernel execution time is " << mdp.getTime() << std::endl;
 
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);

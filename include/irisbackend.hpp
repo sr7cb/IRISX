@@ -93,6 +93,7 @@ class Executor {
         std::string kernel_preamble;
         std::string kernels;
         std::vector<std::vector<int>> values;
+        std::vector<std::tuple<std::string, std::string>> sig_types;
         //std::vector<std::string> kernels;
         std::vector<std::tuple<std::string, int, std::string>> in_params;
         std::vector<void*> params; 
@@ -159,6 +160,7 @@ int Executor::parseDataStructure(std::string input) {
                 kernel_params.push_back(atoi(words.at(7).c_str()));
                 break;
             case 3:
+            {
                 int loc = atoi(words.at(1).c_str());
                 int size = atoi(words.at(2).c_str());
                 int dt = atoi(words.at(3).c_str());
@@ -237,6 +239,13 @@ int Executor::parseDataStructure(std::string input) {
                     }
                 }
                 break;
+            }
+            case 4:
+            {
+                sig_types.push_back(std::make_tuple(words.at(1), words.at(2)));
+                break;
+            }
+            break;
         }
     }
     while(std::getline(stream, line)) {
@@ -275,21 +284,89 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         // }
         // exit(0);
     }
-    iris_mem mem_X;
-    iris_mem mem_Y;
-    iris_mem mem_sym;
-#if 0
-    iris_mem_create(size * sizeof(double) * 2, &mem_X);
-    iris_mem_create(size * sizeof(double) * 2, &mem_Y);
-    iris_mem_create(size * sizeof(double) * 2, &mem_sym);
-#else
-    iris_data_mem_create(&mem_Y, args.at(0), size * sizeof(double) * 2);
-    iris_data_mem_create(&mem_X, args.at(1), size * sizeof(double) * 2);
-    iris_data_mem_create(&mem_sym, args.at(2), size * sizeof(double) * 2);
-#endif
+//     iris_mem mem_X;
+//     iris_mem mem_Y;
+//     iris_mem mem_sym;
+// #if 0
+//     iris_mem_create(size * sizeof(double) * 2, &mem_X);
+//     iris_mem_create(size * sizeof(double) * 2, &mem_Y);
+//     iris_mem_create(size * sizeof(double) * 2, &mem_sym);
+// #else
+    // iris_data_mem_create(&mem_Y, args.at(0), size * sizeof(double) * 2);
+    // iris_data_mem_create(&mem_X, args.at(1), size * sizeof(double) * 2);
+    // iris_data_mem_create(&mem_sym, args.at(2), size * sizeof(double) * 2);
+// #endif
 
-    std::vector<void*> params = { &mem_Y, &mem_X, &mem_sym};
-    std::vector<int> params_info = { iris_w, iris_r, iris_r};
+    // std::vector<void*> params = { &mem_Y, &mem_X, &mem_sym};
+    // std::vector<int> params_info = { iris_w, iris_r, iris_r};
+
+    std::vector<void*> params;
+    std::vector<int> params_info;
+
+    if(args.size() != sig_types.size() && !findOpenMP()) {
+        std::cout << "this is the passed in sig size " <<  args.size() << " this is the size of kernel " << sig_types.size() << std::endl;
+        std::cout << "Error signatures do not match need to pass more parameters from driver" << std::endl;
+        exit(-1);
+    }
+
+    if((getIRISARCH().find("cuda") == std::string::npos && getIRISARCH().find("hip") == std::string::npos) && findOpenMP()) {
+        iris_mem * mem_X = new iris_mem;
+        iris_mem * mem_Y = new iris_mem;
+        iris_mem * mem_sym = new iris_mem;
+        iris_data_mem_create(mem_Y, args.at(0), size * sizeof(double) * 2);
+        iris_data_mem_create(mem_X, args.at(1), size * sizeof(double) * 2);
+        iris_data_mem_create(mem_sym, args.at(2), size * sizeof(double) * 2);
+        params.push_back(mem_Y);
+        params.push_back(mem_X);
+        params.push_back(mem_sym);
+        params_info.push_back(iris_w);
+        params_info.push_back(iris_r);
+        params_info.push_back(iris_r);
+
+    } else {
+        for(int i = 0; i < sig_types.size(); i++) {
+            std::string type = std::get<1>(sig_types.at(i));
+            switch(hashit(type)) {
+                case constant:
+                {
+                    break;
+                }
+                case pointer_int:
+                {
+                    iris_mem * mem_p = new iris_mem;
+                    //iris_mem_create(std::get<1>(device_names.at(i)) * sizeof(int), mem_p);
+                    params.push_back(mem_p);
+                    params_info.push_back(iris_rw);
+                    break;
+                }
+                case pointer_float:
+                {
+                    iris_mem * mem_p = new iris_mem;
+                    //iris_mem_create(std::get<1>(device_names.at(i)) * sizeof(float), mem_p);
+                    params.push_back(mem_p);
+                    params_info.push_back(iris_rw);
+                    break;
+                }
+                case pointer_double:
+                {
+                    iris_mem * mem_p = new iris_mem;
+                    iris_data_mem_create(mem_p, args.at(i), 
+                        size * sizeof(double) * 2);
+                    params.push_back(mem_p);
+                    if(i == 0)
+                        params_info.push_back(iris_w);
+                    else
+                        params_info.push_back(iris_r);
+                    break;
+                }
+                case two:
+                {
+                    params.push_back(args.at(i));
+                    params_info.push_back(sizeof(double));
+                } 
+            }
+        }
+    }
     // std::vector<void*> temps;
     int pointers = 0;
     for(int i = 0; i < device_names.size(); i++) {
@@ -368,9 +445,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 break;
         }
     }
- 
-    auto start = std::chrono::high_resolution_clock::now();
-
+    std::chrono::milliseconds duration;
     for(int i = 0; i < kernel_names.size(); i++) {
         std::cout << "number of kernels is: " << kernel_names.size() << std::endl;
                 std::cout << "kernel name: " << kernel_names.at(i) << std::endl;
@@ -399,18 +474,22 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 #if 0
         iris_task_d2h_full(task, mem_Y, args.at(0));
 #else
-	if(i == kernel_names.size() -1)   iris_task_dmem_flush_out(task, mem_Y);
+	if(i == kernel_names.size() -1)   iris_task_dmem_flush_out(task, *(iris_mem*)params.at(0));
 #endif
 
 #if 0
         for(int j = 0; j < data.size(); j++)
             iris_task_d2h_full(task, ((*(iris_mem*)params.at(j+3))), data.at(j));
 #endif
+        auto start = std::chrono::high_resolution_clock::now();
         iris_task_submit(task, iris_gpu, NULL, 1);
+        auto stop = std::chrono::high_resolution_clock::now();
+        duration += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);;
     }
 
-    auto stop = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<float, std::milli> duration = stop - start;
+    
+    // std::chrono::duration<float, std::milli> duration = stop - start;
+    std::cout << "time for iris is" << duration.count() << std::endl;
     CPUTime = duration.count();
     return getKernelTime();
     platform.finalize();
