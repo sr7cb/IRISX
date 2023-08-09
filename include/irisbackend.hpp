@@ -325,6 +325,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 
     } else {
         for(int i = 0; i < sig_types.size(); i++) {
+            std::cout << std::get<0>(sig_types.at(i)) << ":" << std::get<1>(sig_types.at(i)) << std::endl;
             std::string type = std::get<1>(sig_types.at(i));
             switch(hashit(type)) {
                 case constant:

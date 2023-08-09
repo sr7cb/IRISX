@@ -219,7 +219,7 @@ public:
     void transform();
     std::string semantics2(std::string arch);
     virtual void randomProblemInstance() = 0;
-    virtual void semantics() = 0;
+    virtual void semantics(std::string arch) = 0;
     float gpuTime;
     void run(Executor e);
     std::string returnJIT();
@@ -248,9 +248,9 @@ std::string FFTXProblem::semantics2(std::string arch) {
         std::cout << "pipe failed\n";
     std::stringstream out; 
     std::streambuf *coutbuf = std::cout.rdbuf(out.rdbuf()); //save old buf
-    getImportAndConfIRIS(arch);
-    semantics();
-    printIRISBackend(name, sizes, arch);
+    // getImportAndConfIRIS(arch);
+    semantics(arch);
+    // printIRISBackend(name, sizes, arch);
     std::cout.rdbuf(coutbuf);
     std::string script = out.str();
     int res = write(p[1], script.c_str(), script.size());
@@ -260,6 +260,9 @@ std::string FFTXProblem::semantics2(std::string arch) {
     restore_input(save_stdin);
     close(p[0]);
     result.erase(result.size()-8);
+    while(result.back() != '}') {
+        result.pop_back();
+    }
     std::string f("------------------");
     if(arch == "cuda") {
         result = result.substr(result.find("spiral> JIT BEGIN"));
@@ -271,7 +274,6 @@ std::string FFTXProblem::semantics2(std::string arch) {
         metakernel << result;
         metakernel.close();
     } else if(arch == "hip") {
-        result.erase(result.size()-8);
         result = result.substr(result.find("spiral> JIT BEGIN"));
         std::ofstream kernel, metakernel;
         kernel.open("kernel.hip.cpp");
