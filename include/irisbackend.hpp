@@ -447,6 +447,9 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         }
     }
     std::chrono::milliseconds duration;
+    iris_graph graph;
+    iris_graph_create(&graph);
+
     for(int i = 0; i < kernel_names.size(); i++) {
         std::cout << "number of kernels is: " << kernel_names.size() << std::endl;
                 std::cout << "kernel name: " << kernel_names.at(i) << std::endl;
@@ -483,10 +486,18 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
             iris_task_d2h_full(task, ((*(iris_mem*)params.at(j+3))), data.at(j));
 #endif
         auto start = std::chrono::high_resolution_clock::now();
-        iris_task_submit(task, iris_gpu, NULL, 1);
+        //iris_task_submit(task, iris_all, NULL, 1);
+        iris_graph_task(graph, task, iris_all, NULL);
+
+
+        //iris_task_submit(task, iris_roundrobin, NULL, 1);
+        //iris_task_submit(task, iris_gpu, NULL, 1);
         auto stop = std::chrono::high_resolution_clock::now();
-        duration += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);;
+        duration += std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
     }
+  
+    iris_graph_submit(graph, iris_all, 1);
+
 
     
     // std::chrono::duration<float, std::milli> duration = stop - start;
