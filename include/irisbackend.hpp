@@ -538,8 +538,9 @@ void Executor::execute() {
 
 void Executor::execute2(std::string input, std::string arch) {
     std::cout << "arch in execute2 " << arch << std::endl;
-    if((getIRISARCH() == "cuda" || getIRISARCH() == "hip") && parsed == 0 && !findOpenMP()) {
+    if((arch == "cuda" || arch == "hip") && parsed == 0 && !findOpenMP()) {
         parsed = parseDataStructure ( input );
+        std::cout << "parsed " << parsed << std::endl;
     } else {
         std::cout << "got into else branch for 1 kernel\n";
         if(kernel_names.size() == 0)
@@ -547,7 +548,7 @@ void Executor::execute2(std::string input, std::string arch) {
     }
     if(arch == "cuda") {
         std::cout << "in cuda code portion\n";
-        system("nvcc -ptx kernel.cu");
+        system("nvcc -Xcudafe --diag_suppress=declared_but_not_referenced -ptx kernel.cu");
     }
     else if(arch == "hip") {
         std::cout << "in hip code portion\n";
