@@ -450,12 +450,13 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
     iris_graph graph;
     iris_graph_create(&graph);
 
+    iris_task task[kernel_names.size()];
     for(int i = 0; i < kernel_names.size(); i++) {
         std::cout << "number of kernels is: " << kernel_names.size() << std::endl;
                 std::cout << "kernel name: " << kernel_names.at(i) << std::endl;
 
-        iris_task task;
-        iris_task_create(&task);
+        //iris_task task;
+        iris_task_create(&task[i]);
 
 #if 0
         iris_task_h2d_full(task, mem_Y, args.at(0));
@@ -471,14 +472,14 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
             }
             std::vector<size_t> grid{(size_t)kernel_params[i*6]*kernel_params[i*6+3], (size_t)kernel_params[i*6+1]*kernel_params[i*6+4], (size_t)kernel_params[i*6+2]*kernel_params[i*6+5]};
             std::vector<size_t> block{(size_t)kernel_params[i*6+3], (size_t)kernel_params[i*6+4], (size_t)kernel_params[i*6+5]};
-            iris_task_kernel(task, kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), sig_types.size()+pointers, params.data(), params_info.data());
+            iris_task_kernel(task[i], kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), sig_types.size()+pointers, params.data(), params_info.data());
         } else{
-            iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, &size, NULL, 3+pointers, params.data(), params_info.data());
+            iris_task_kernel(task[i], kernel_names.at(i).c_str(), 1, NULL, &size, NULL, 3+pointers, params.data(), params_info.data());
         }
 #if 0
         iris_task_d2h_full(task, mem_Y, args.at(0));
 #else
-	if(i == kernel_names.size() -1)   iris_task_dmem_flush_out(task, *(iris_mem*)params.at(0));
+	if(i == kernel_names.size() -1)   iris_task_dmem_flush_out(task[i], *(iris_mem*)params.at(0));
 #endif
 
 #if 0
@@ -487,7 +488,65 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 #endif
         auto start = std::chrono::high_resolution_clock::now();
         //iris_task_submit(task, iris_all, NULL, 1);
-        iris_graph_task(graph, task, iris_all, NULL);
+        iris_graph_task(graph, task[i], iris_all, NULL);
+        if (i == 2){
+            iris_task_depend(task[i], 1, &task[0]); 
+            iris_task_depend(task[i], 1, &task[1]); 
+        }
+
+        if (i == 3){
+            iris_task_depend(task[i], 1, &task[2]); 
+        }
+        if (i == 4){
+            iris_task_depend(task[i], 1, &task[3]); 
+        }
+
+        if (i == 5){
+            iris_task_depend(task[i], 1, &task[3]); 
+        }
+
+       if (i == 6){
+            iris_task_depend(task[i], 1, &task[4]); 
+            iris_task_depend(task[i], 1, &task[5]); 
+        }
+
+       if (i == 7){
+            iris_task_depend(task[i], 1, &task[6]); 
+        }
+
+       if (i == 8){
+            iris_task_depend(task[i], 1, &task[7]); 
+        }
+
+       if (i == 9){
+            iris_task_depend(task[i], 1, &task[2]); 
+        }
+
+       if (i == 10){
+            iris_task_depend(task[i], 1, &task[9]); 
+        }
+
+       if (i == 11){
+            iris_task_depend(task[i], 1, &task[9]); 
+        }
+
+       if (i == 12){
+            iris_task_depend(task[i], 1, &task[10]); 
+            iris_task_depend(task[i], 1, &task[11]); 
+        }
+
+       if (i == 13){
+            iris_task_depend(task[i], 1, &task[12]); 
+        }
+
+       if (i == 14){
+            iris_task_depend(task[i], 1, &task[13]); 
+        }
+       if (i == 15){
+            iris_task_depend(task[i], 1, &task[8]); 
+            iris_task_depend(task[i], 1, &task[14]); 
+        }
+
 
 
         //iris_task_submit(task, iris_roundrobin, NULL, 1);
