@@ -26,6 +26,7 @@
 #include <cstring>
 #include <chrono>
 #include <regex>
+#include <unordered_map>
 #pragma once
 
 #define DEBUGOUT 0
@@ -92,11 +93,13 @@ class Executor {
         std::vector<int> kernel_params;
         std::string kernel_preamble;
         std::string kernels;
-        std::vector<std::vector<int>> values;
+        std::vector<std::vector<std::string>> kernel_args;
+        std::unordered_map<std::string, int> arg2index; 
         std::vector<std::tuple<std::string, std::string>> sig_types;
         //std::vector<std::string> kernels;
         std::vector<std::tuple<std::string, int, std::string>> in_params;
-        std::vector<void*> params; 
+        std::vector<void*> params;
+        std::vector<int> params_info; 
         std::vector<void *> data;
         std::vector<int> data_lengths;
         void * shared_lib;
@@ -151,6 +154,7 @@ int Executor::parseDataStructure(std::string input) {
                 in_params.push_back(std::make_tuple(words.at(1), atoi(words.at(2).c_str()), words.at(3)));
                 break;
             case 2:
+            {   
                 kernel_names.push_back(words.at(1));
                 kernel_params.push_back(atoi(words.at(2).c_str()));
                 kernel_params.push_back(atoi(words.at(3).c_str()));
@@ -158,7 +162,15 @@ int Executor::parseDataStructure(std::string input) {
                 kernel_params.push_back(atoi(words.at(5).c_str()));
                 kernel_params.push_back(atoi(words.at(6).c_str()));
                 kernel_params.push_back(atoi(words.at(7).c_str()));
+                std::vector<std::string> localv;
+                for(int i = 8; i < words.size(); i++) {
+                    // std::cout << "hello from parser: ";
+                    // std::cout << words.at(i) << std::endl;
+                    localv.push_back(words.at(i));
+                }
+                kernel_args.push_back(localv);
                 break;
+            }
             case 3:
             {
                 int loc = atoi(words.at(1).c_str());
@@ -299,10 +311,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 
     // std::vector<void*> params = { &mem_Y, &mem_X, &mem_sym};
     // std::vector<int> params_info = { iris_w, iris_r, iris_r};
-
-    std::vector<void*> params;
-    std::vector<int> params_info;
-
+    int number_params = 0;
     if(args.size() != sig_types.size() && !findOpenMP()) {
         std::cout << "this is the passed in sig size " <<  args.size() << " this is the size of kernel " << sig_types.size() << std::endl;
         std::cout << "Error signatures do not match need to pass more parameters from driver" << std::endl;
@@ -338,6 +347,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                     //iris_mem_create(std::get<1>(device_names.at(i)) * sizeof(int), mem_p);
                     params.push_back(mem_p);
                     params_info.push_back(iris_rw);
+                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
+                    number_params++;
                     break;
                 }
                 case pointer_float:
@@ -346,6 +357,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                     //iris_mem_create(std::get<1>(device_names.at(i)) * sizeof(float), mem_p);
                     params.push_back(mem_p);
                     params_info.push_back(iris_rw);
+                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
+                    number_params++;
                     break;
                 }
                 case pointer_double:
@@ -358,12 +371,17 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                         params_info.push_back(iris_w);
                     else
                         params_info.push_back(iris_r);
+                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
+                    number_params++;
                     break;
                 }
                 case two:
                 {
                     params.push_back(args.at(i));
                     params_info.push_back(sizeof(double));
+                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
+                    number_params++;
+                    break;
                 } 
             }
         }
@@ -390,6 +408,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 params.push_back(mem_p);
                 params_info.push_back(iris_rw);
                 pointers++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
+                number_params++;
                 break;
             }
             case pointer_int:
@@ -399,6 +419,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 params.push_back(mem_p);
                 params_info.push_back(iris_rw);
                 pointers++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
+                number_params++;
                 break;
             }
             case pointer_float:
@@ -408,6 +430,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 params.push_back(mem_p);
                 params_info.push_back(iris_rw);
                 pointers++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
+                number_params++;
                 break;
             }
             case pointer_double:
@@ -424,6 +448,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 params.push_back(mem_p);
                 params_info.push_back(iris_rw);
                 pointers++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
+                number_params++;
                 break;
             }
             case two:
@@ -440,6 +466,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 params.push_back(mem_p);
                 params_info.push_back(iris_rw);
                 pointers++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
+                number_params++;
                 break;
             }
             default:
@@ -472,7 +500,17 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
             }
             std::vector<size_t> grid{(size_t)kernel_params[i*6]*kernel_params[i*6+3], (size_t)kernel_params[i*6+1]*kernel_params[i*6+4], (size_t)kernel_params[i*6+2]*kernel_params[i*6+5]};
             std::vector<size_t> block{(size_t)kernel_params[i*6+3], (size_t)kernel_params[i*6+4], (size_t)kernel_params[i*6+5]};
-            iris_task_kernel(task[i], kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), sig_types.size()+pointers, params.data(), params_info.data());
+            std::vector<void*> local_params;
+            std::vector<int> local_params_info; 
+            for(int j = 0; j < kernel_args.at(i).size(); j++) {
+                std::cout << " the first kernel arg " << kernel_args.at(i).at(j) << std::endl;
+                if(arg2index.find(kernel_args.at(i).at(j)) != arg2index.end()) {
+                    std::cout <<" the second kernel arg " << arg2index.at(kernel_args.at(i).at(j)) << std::endl;
+                    local_params.push_back(params.at(arg2index.at(kernel_args.at(i).at(j))));
+                    local_params_info.push_back(params_info.at(arg2index.at(kernel_args.at(i).at(j))));
+                }
+            }
+            iris_task_kernel(task[i], kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), kernel_args.at(i).size(), local_params.data(), local_params_info.data());
         } else{
             iris_task_kernel(task[i], kernel_names.at(i).c_str(), 1, NULL, &size, NULL, 3+pointers, params.data(), params_info.data());
         }
@@ -489,63 +527,63 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         auto start = std::chrono::high_resolution_clock::now();
         //iris_task_submit(task, iris_all, NULL, 1);
         iris_graph_task(graph, task[i], iris_all, NULL);
-        if (i == 2){
-            iris_task_depend(task[i], 1, &task[0]); 
-            iris_task_depend(task[i], 1, &task[1]); 
-        }
+    //     if (i == 2){
+    //         iris_task_depend(task[i], 1, &task[0]); 
+    //         iris_task_depend(task[i], 1, &task[1]); 
+    //     }
 
-        if (i == 3){
-            iris_task_depend(task[i], 1, &task[2]); 
-        }
-        if (i == 4){
-            iris_task_depend(task[i], 1, &task[3]); 
-        }
+    //     if (i == 3){
+    //         iris_task_depend(task[i], 1, &task[2]); 
+    //     }
+    //     if (i == 4){
+    //         iris_task_depend(task[i], 1, &task[3]); 
+    //     }
 
-        if (i == 5){
-            iris_task_depend(task[i], 1, &task[3]); 
-        }
+    //     if (i == 5){
+    //         iris_task_depend(task[i], 1, &task[3]); 
+    //     }
 
-       if (i == 6){
-            iris_task_depend(task[i], 1, &task[4]); 
-            iris_task_depend(task[i], 1, &task[5]); 
-        }
+    //    if (i == 6){
+    //         iris_task_depend(task[i], 1, &task[4]); 
+    //         iris_task_depend(task[i], 1, &task[5]); 
+    //     }
 
-       if (i == 7){
-            iris_task_depend(task[i], 1, &task[6]); 
-        }
+    //    if (i == 7){
+    //         iris_task_depend(task[i], 1, &task[6]); 
+    //     }
 
-       if (i == 8){
-            iris_task_depend(task[i], 1, &task[7]); 
-        }
+    //    if (i == 8){
+    //         iris_task_depend(task[i], 1, &task[7]); 
+    //     }
 
-       if (i == 9){
-            iris_task_depend(task[i], 1, &task[2]); 
-        }
+    //    if (i == 9){
+    //         iris_task_depend(task[i], 1, &task[2]); 
+    //     }
 
-       if (i == 10){
-            iris_task_depend(task[i], 1, &task[9]); 
-        }
+    //    if (i == 10){
+    //         iris_task_depend(task[i], 1, &task[9]); 
+    //     }
 
-       if (i == 11){
-            iris_task_depend(task[i], 1, &task[9]); 
-        }
+    //    if (i == 11){
+    //         iris_task_depend(task[i], 1, &task[9]); 
+    //     }
 
-       if (i == 12){
-            iris_task_depend(task[i], 1, &task[10]); 
-            iris_task_depend(task[i], 1, &task[11]); 
-        }
+    //    if (i == 12){
+    //         iris_task_depend(task[i], 1, &task[10]); 
+    //         iris_task_depend(task[i], 1, &task[11]); 
+    //     }
 
-       if (i == 13){
-            iris_task_depend(task[i], 1, &task[12]); 
-        }
+    //    if (i == 13){
+    //         iris_task_depend(task[i], 1, &task[12]); 
+    //     }
 
-       if (i == 14){
-            iris_task_depend(task[i], 1, &task[13]); 
-        }
-       if (i == 15){
-            iris_task_depend(task[i], 1, &task[8]); 
-            iris_task_depend(task[i], 1, &task[14]); 
-        }
+    //    if (i == 14){
+    //         iris_task_depend(task[i], 1, &task[13]); 
+    //     }
+    //    if (i == 15){
+    //         iris_task_depend(task[i], 1, &task[8]); 
+    //         iris_task_depend(task[i], 1, &task[14]); 
+    //     }
 
 
 

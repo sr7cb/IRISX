@@ -5,8 +5,11 @@ CFLAGS=-g
 proto:
 	g++ -I$(IRIS_PATH)/include -I. -Wunused-result -O3 $(CFLAGS) -o spiral_proto spiral_proto_leveleuler.cpp $(LDFLAGS)
 
-spiral:
+mddft:
 	g++ -I$(IRIS_PATH)/include -I. -Wunused-result -O3 $(CFLAGS) -o spiral_iris_mddft spiral_iris_mddft.cpp $(LDFLAGS)
+
+mdprdft:
+	g++ -I$(IRIS_PATH)/include -I. -Wunused-result -O3 $(CFLAGS) -o spiral_iris_mdprdft spiral_iris_mdprdft.cpp $(LDFLAGS)
 
 cpu:
 	g++ -I$(IRIS_PATH)/include -O3 hello_world.cpp $(LDFLAGS)
