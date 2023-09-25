@@ -401,7 +401,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 iris_mem_create(data_lengths.at(i) * sizeof(double), mem_p);
 #else
     		iris_data_mem_create(mem_p, data.at(i), 
-				std::get<1>(device_names.at(i)) * sizeof(double));
+				// std::get<1>(device_names.at(i)) * sizeof(double));
+                data_lengths.at(i) * sizeof(double));
 #endif
 
 
@@ -485,7 +486,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 
         //iris_task task;
         iris_task_create(&task[i]);
-
+        std::vector<void*> local_params;
+        std::vector<int> local_params_info; 
 #if 0
         iris_task_h2d_full(task, mem_Y, args.at(0));
         iris_task_h2d_full(task, mem_X, args.at(1));
@@ -500,8 +502,6 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
             }
             std::vector<size_t> grid{(size_t)kernel_params[i*6]*kernel_params[i*6+3], (size_t)kernel_params[i*6+1]*kernel_params[i*6+4], (size_t)kernel_params[i*6+2]*kernel_params[i*6+5]};
             std::vector<size_t> block{(size_t)kernel_params[i*6+3], (size_t)kernel_params[i*6+4], (size_t)kernel_params[i*6+5]};
-            std::vector<void*> local_params;
-            std::vector<int> local_params_info; 
             for(int j = 0; j < kernel_args.at(i).size(); j++) {
                 std::cout << " the first kernel arg " << kernel_args.at(i).at(j) << std::endl;
                 if(arg2index.find(kernel_args.at(i).at(j)) != arg2index.end()) {
@@ -517,7 +517,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 #if 0
         iris_task_d2h_full(task, mem_Y, args.at(0));
 #else
-	if(i == kernel_names.size() -1)   iris_task_dmem_flush_out(task[i], *(iris_mem*)params.at(0));
+	if(i == kernel_names.size() -1)   iris_task_dmem_flush_out(task[i], *(iris_mem*)local_params.at(0));
 #endif
 
 #if 0
