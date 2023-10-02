@@ -94,6 +94,12 @@ _abs := Lambda([ j ], Lambda([ x1 ], abs(x1)));
 deconvolve_filt := Blk([[V(1),V(1), V(-4), V(1), V(1)]]);
 )"};
 
+// if not IsBound(opts.postProcessCode) then
+//     opts.postProcessCode := (c, opts) -> fftx.platforms.cuda.FixUpTeslaV_Code(c, opts); 
+//     opts.fixUpTeslaV_Code := true;
+// else
+//     opts.fixUpTeslaV_Code := true;
+// fi;
 
 static constexpr auto proto_script2{
 R"(
@@ -426,6 +432,7 @@ Append(c2.cmds[1].vars,[p1,p2,p3,p4]);
 
 PrintIRISMETAJIT(c2, opts);
 )"};
+
 
 
 
