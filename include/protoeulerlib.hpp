@@ -409,7 +409,10 @@ p3 := var.fresh_t("P", c2.cmds[1].vars[1].t);
 p3.decl_specs := ["__device__"];
 p4 := var.fresh_t("P", c2.cmds[1].vars[1].t);
 p4.decl_specs := ["__device__"];
-
+p5 := var.fresh_t("P", c2.cmds[1].vars[1].t);
+p5.decl_specs := ["__device__"];
+p6 := var.fresh_t("P", c2.cmds[1].vars[1].t);
+p6.decl_specs := ["__device__"];
 
 SubstTopDown(c2, @(1, specifiers_func, e-> e.id="ker_code1"), g->
     SubstVars(g, rec((c2.cmds[1].vars[1].id) := p1)));
@@ -420,6 +423,17 @@ SubstTopDown(c2, @(1, specifiers_func, e-> e.id="ker_code11"), g->
 SubstTopDown(c2, @(1, specifiers_func, e-> e.id="ker_code14"), g->
     SubstVars(g, rec((c2.cmds[1].vars[1].id) := p4)));
 
+SubstTopDown(c2, @(1, specifiers_func, e-> e.id="ker_code9"), g->
+    SubstVars(g, rec((c2.cmds[1].vars[1].id) := p5)));
+SubstTopDown(c2, @(1, specifiers_func, e-> e.id="ker_code10"), g->
+    SubstVars(g, rec((c2.cmds[1].vars[1].id) := p5)));
+SubstTopDown(c2, @(1, specifiers_func, e-> e.id="ker_code11"), g->
+    SubstVars(g, rec((c2.cmds[1].vars[1].id) := p5)));
+SubstTopDown(c2, @(1, specifiers_func, e-> e.id="ker_code12"), g->
+    SubstVars(g, rec((c2.cmds[1].vars[1].id) := p5)));
+SubstTopDown(c2, @(1, specifiers_func, e-> e.id="ker_code13"), g->
+    SubstVars(g, rec((c2.cmds[1].vars[1].id) := p5)));
+
 c3 := SubstTopDown(c2.cmds[1].cmd.cmds[2].cmds[3], @(1, add, e-> Length(Collect(e, @(2, var, h-> h.id = c2.cmds[1].vars[1].id))) > 0 and Length(e.args) = 2 ), f -> add(f.args[1], nth(p1, f.args[2].idx)));
 c4 := SubstTopDown(c2.cmds[1].cmd.cmds[2].cmds[7], @(1, add, e-> Length(Collect(e, @(2, var, h-> h.id = c2.cmds[1].vars[3].id))) > 0 and Length(e.args) = 2 ), f -> add(f.args[1], nth(p2, f.args[2].idx)));
 c5 := SubstTopDown(c2.cmds[1].cmd.cmds[2].cmds[13], @(1, add, e-> Length(Collect(e, @(2, var, h-> h.id = c2.cmds[1].vars[3].id))) > 0 and Length(e.args) = 2 ), f -> add(f.args[1], nth(p3, f.args[2].idx)));
@@ -428,7 +442,16 @@ c2.cmds[1].cmd.cmds[2].cmds[3] := c3;
 c2.cmds[1].cmd.cmds[2].cmds[7] := c4;
 c2.cmds[1].cmd.cmds[2].cmds[13] := c5;
 c2.cmds[1].cmd.cmds[2].cmds[16] := c6;
-Append(c2.cmds[1].vars,[p1,p2,p3,p4]);
+Append(c2.cmds[1].vars,[p1,p2,p3,p4,p5,p6]);
+
+SubstTopDown(c2, @(1, specifiers_func, e-> e.id="ker_code10"), g->
+    SubstVars(g, rec((c2.cmds[1].vars[3].id) := p6)));
+SubstTopDown(c2, @(1, specifiers_func, e-> e.id="ker_code12"), g->
+    SubstVars(g, rec((c2.cmds[1].vars[3].id) := p6)));
+SubstTopDown(c2, @(1, specifiers_func, e-> e.id="ker_code13"), g->
+    SubstVars(g, rec((c2.cmds[1].vars[3].id) := p6)));
+SubstTopDown(c2, @(1, specifiers_func, e-> e.id="ker_code14"), g->
+    SubstVars(g, rec((c2.cmds[1].vars[3].id) := p6)));
 
 PrintIRISMETAJIT(c2, opts);
 )"};
