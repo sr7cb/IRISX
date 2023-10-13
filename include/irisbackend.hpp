@@ -88,7 +88,6 @@ class Executor {
         };
         std::vector<void*> kernelargs;
         std::vector<std::tuple<std::string, int, std::string>> device_names;
-        // std::string kernel_name;
         std::vector<std::string> kernel_names;
         std::vector<int> kernel_params;
         std::string kernel_preamble;
@@ -96,11 +95,10 @@ class Executor {
         std::vector<std::vector<std::string>> kernel_args;
         std::unordered_map<std::string, int> arg2index; 
         std::vector<std::tuple<std::string, std::string>> sig_types;
-        //std::vector<std::string> kernels;
         std::vector<std::tuple<std::string, int, std::string>> in_params;
         std::vector<void*> params;
         std::vector<int> params_info;
-        std::unordered_map<std::string, long> new_params_info;  
+        std::vector<std::vector<std::tuple<std::string,int>>> new_params_info; 
         std::vector<void *> data;
         std::vector<int> data_lengths;
         void * shared_lib;
@@ -112,7 +110,6 @@ class Executor {
         void execute2(std::string file_name, std::string arch);
         float getKernelTime();
         int parseDataStructure(std::string input);
-        //void returnData(std::vector<fftx::array_t<3,std::complex<double>>> &out1);
 };
 
 Executor::string_code Executor::hashit(std::string const& inString) {
@@ -141,7 +138,6 @@ int Executor::parseDataStructure(std::string input) {
         }
         std::istringstream ss(line);
         std::string s;
-        //int counter = 0;
         std::vector<std::string> words;
         while(std::getline(ss,s,delim)) {
             words.push_back(s);
@@ -164,13 +160,13 @@ int Executor::parseDataStructure(std::string input) {
                 kernel_params.push_back(atoi(words.at(6).c_str()));
                 kernel_params.push_back(atoi(words.at(7).c_str()));
                 std::vector<std::string> localv;
+                std::vector<std::tuple<std::string,int>> local_p;
                 for(int i = 8; i < words.size(); i+=2) {
-                    // std::cout << "hello from parser: ";
-                    // std::cout << words.at(i) << std::endl;
                     localv.push_back(words.at(i));
-                    new_params_info.insert(std::make_pair(words.at(i), strtol(words.at(i+1).c_str(), NULL, 10)));
+                    local_p.push_back(std::make_pair(words.at(i), strtol(words.at(i+1).c_str(), NULL, 10)));
                 }
                 kernel_args.push_back(localv);
+                new_params_info.push_back(local_p);
                 break;
             }
             case 3:
@@ -335,10 +331,6 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                     iris_data_mem_create(mem_p, args.at(i), 
                         size * sizeof(int) * 2);
                     params.push_back(mem_p);
-                    if(new_params_info.find(std::get<0>(sig_types.at(i))) != new_params_info.end())
-                        params_info.push_back(new_params_info.at(std::get<0>(sig_types.at(i))));
-                    else 
-                        params_info.push_back(iris_rw);
                     arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
                     number_params++;
                     break;
@@ -349,10 +341,6 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                     iris_data_mem_create(mem_p, args.at(i), 
                         size * sizeof(float) * 2);
                     params.push_back(mem_p);
-                    if(new_params_info.find(std::get<0>(sig_types.at(i))) != new_params_info.end())
-                        params_info.push_back(new_params_info.at(std::get<0>(sig_types.at(i))));
-                    else 
-                        params_info.push_back(iris_rw);
                     arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
                     number_params++;
                     break;
@@ -363,10 +351,6 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                     iris_data_mem_create(mem_p, args.at(i), 
                         size * sizeof(double) * 2);
                     params.push_back(mem_p);
-                    if(new_params_info.find(std::get<0>(sig_types.at(i))) != new_params_info.end())
-                        params_info.push_back(new_params_info.at(std::get<0>(sig_types.at(i))));
-                    else 
-                        params_info.push_back(iris_rw);
                     arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
                     number_params++;
                     break;
@@ -374,7 +358,13 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 case two:
                 {
                     params.push_back(args.at(i));
-                    params_info.push_back(sizeof(double));
+                    for(int j = 0; j < new_params_info.size(); j++) {
+                        for(int k = 0; k < new_params_info.at(j).size(); k++) {
+                            if(std::get<0>(new_params_info.at(j).at(k)) == std::get<0>(sig_types.at(i))) {
+                               std::get<1>(new_params_info.at(j).at(k)) = sizeof(double);
+                            }
+                        }
+                    }
                     arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
                     number_params++;
                     break;
@@ -392,10 +382,6 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 iris_mem * mem_p = new iris_mem;
     		    iris_data_mem_create(mem_p, data.at(i), data_lengths.at(i) * sizeof(double));
                 params.push_back(mem_p);
-                if(new_params_info.find(std::get<0>(device_names[i])) != new_params_info.end())
-                    params_info.push_back(new_params_info.at(std::get<0>(device_names[i])));
-                else 
-                    params_info.push_back(iris_rw);
                 pointers++;
                 arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
                 number_params++;
@@ -406,10 +392,6 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 iris_mem * mem_p = new iris_mem;
                 iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(int));
                 params.push_back(mem_p);
-                if(new_params_info.find(std::get<0>(device_names[i])) != new_params_info.end())
-                    params_info.push_back(new_params_info.at(std::get<0>(device_names[i])));
-                else 
-                    params_info.push_back(iris_rw);
                 pointers++;
                 arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
                 number_params++;
@@ -420,10 +402,6 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 iris_mem * mem_p = new iris_mem;
                 iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(float));
                 params.push_back(mem_p);
-                if(new_params_info.find(std::get<0>(device_names[i])) != new_params_info.end())
-                    params_info.push_back(new_params_info.at(std::get<0>(device_names[i])));
-                else 
-                    params_info.push_back(iris_rw);
                 pointers++;
                 arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
                 number_params++;
@@ -434,10 +412,6 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 iris_mem * mem_p = new iris_mem;
     		    iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
                 params.push_back(mem_p);
-                if(new_params_info.find(std::get<0>(device_names[i])) != new_params_info.end())
-                    params_info.push_back(new_params_info.at(std::get<0>(device_names[i])));
-                else 
-                    params_info.push_back(iris_rw);
                 pointers++;
                 arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
                 number_params++;
@@ -448,10 +422,6 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 iris_mem * mem_p = new iris_mem;
     		    iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
                 params.push_back(mem_p);
-                if(new_params_info.find(std::get<0>(device_names[i])) != new_params_info.end())
-                    params_info.push_back(new_params_info.at(std::get<0>(device_names[i])));
-                else 
-                    params_info.push_back(iris_rw);
                 pointers++;
                 arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
                 number_params++;
@@ -462,6 +432,11 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         }
     }
 
+    
+    // for(int i = 0; i < new_params_info.size(); i++) {
+    //     for(int j = 0; j < new_params_info.at(i).size(); j++)
+    //         std::cout << std::get<0>(new_params_info.at(i).at(j)) << " " << std::get<1>(new_params_info.at(i).at(j)) << std::endl;
+    // }
     iris_graph graph;
     iris_graph_create(&graph);
 
@@ -485,7 +460,8 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 if(arg2index.find(kernel_args.at(i).at(j)) != arg2index.end()) {
                     std::cout <<" the second kernel arg " << arg2index.at(kernel_args.at(i).at(j)) << std::endl;
                     local_params.push_back(params.at(arg2index.at(kernel_args.at(i).at(j))));
-                    local_params_info.push_back(params_info.at(arg2index.at(kernel_args.at(i).at(j))));
+                    local_params_info.push_back(std::get<1>(new_params_info.at(i).at(j)));
+
                 }
             }
             iris_task_kernel(task[i], kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), kernel_args.at(i).size(), local_params.data(), local_params_info.data());
