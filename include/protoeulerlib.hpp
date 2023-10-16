@@ -53,16 +53,21 @@ Load(protox);
 ImportAll(protox);
 Load(jit);
 ImportAll(jit);
+)"};
 
-input_dims := [40,40];
-deconvolve_dims := [38,38];
-dims_Xdir := [38,35];
-dims_Ydir := [35,38];
-flux_Xdims := [36,35];
-flux_Ydims := [35,36];
-divergence_Xdims := [36,34];
-divergence_Ydims := [34,36];
-final_dims := [32,32];
+static constexpr auto proto_script1_5{
+R"(
+#input_dims := [40,40];
+#deconvolve_dims := [38,38];
+#dims_Xdir := [38,35];
+#dims_Ydir := [35,38];
+#flux_Xdims := [36,35];
+#flux_Ydims := [35,36];
+#divergence_Xdims := [36,34];
+#divergence_Ydims := [34,36];
+#final_dims := [32,32];
+
+
 x1 := var.fresh_t("x1",TArray(TReal,Product(input_dims)));
 rho := var.fresh_t("rho", TPtr(TReal));
 gamma := var.fresh_t("gamma", TReal);
@@ -125,8 +130,8 @@ consttoPrim1 := SIMTISum(ASIMTKernelFlag(ASIMTGridDimX(QuoInt(i.range,256)+1)), 
 
 deconvolve_shift := add(mul(input_dims[2], idiv(add(mul(b,256),i2), deconvolve_dims[2])), imod(add(mul(b,256),i2), deconvolve_dims[2]));
 gf_decon := Gath(fStack(fAdd(4 * Product(input_dims), 1, add(add(deconvolve_shift, V(1)), mul(j2, Product(input_dims)))),
-    fAdd(4 * Product(input_dims), 3, add(add(deconvolve_shift, V(40)), mul(j2,Product(input_dims)))),
-    fAdd(4 * Product(input_dims), 1, add(add(deconvolve_shift, V(81)), mul(j2,Product(input_dims))))));
+    fAdd(4 * Product(input_dims), 3, add(add(deconvolve_shift, input_dims[2]), mul(j2,Product(input_dims)))),
+    fAdd(4 * Product(input_dims), 1, add(add(deconvolve_shift, add(input_dims[2]*2, V(1))), mul(j2,Product(input_dims))))));
 G_decon := Gath(fAdd(4* Product(input_dims), 1, add(add(mul(input_dims[2], add(idiv(add(mul(b,256),i2), deconvolve_dims[2]), V(1))), add(imod(add(mul(b,256),i2), deconvolve_dims[2]), V(1))), mul(j2,Product(input_dims)))));
 rv_decon := RowVec(-V(1/24), 1);
 _decon := rv_decon * VStack(deconvolve_filt * gf_decon, G_decon);
@@ -141,8 +146,8 @@ decon_consttoPrim2 := SIMTISum(ASIMTKernelFlag(ASIMTGridDimX(QuoInt(i2.range,256
 
 convolve_shift := add(mul(input_dims[2], idiv(add(mul(b,256),i4), deconvolve_dims[2])), imod(add(mul(b,256),i4), deconvolve_dims[2]));
 gf_conv := Gath(fStack(fAdd(4 * Product(input_dims) + 4 * Product(deconvolve_dims), 1, add(add(convolve_shift, V(1)), mul(j2, Product(input_dims)))),
-    fAdd(4 * Product(input_dims) + 4 * Product(deconvolve_dims), 3, add(add(convolve_shift, V(40)), mul(j2,Product(input_dims)))),
-    fAdd(4 * Product(input_dims) + 4 * Product(deconvolve_dims), 1, add(add(convolve_shift, V(81)), mul(j2,Product(input_dims))))));
+    fAdd(4 * Product(input_dims) + 4 * Product(deconvolve_dims), 3, add(add(convolve_shift, input_dims[2]), mul(j2,Product(input_dims)))),
+    fAdd(4 * Product(input_dims) + 4 * Product(deconvolve_dims), 1, add(add(convolve_shift, add(input_dims[2]*2, V(1))), mul(j2,Product(input_dims))))));
 G_conv := Gath(fAdd(4 * Product(input_dims) + 4 * Product(deconvolve_dims), 1, add(add(mul(b,256),i4),add(4 * Product(input_dims), mul(j2, Product(deconvolve_dims))))));
 rv_conv := RowVec(V(1/24), 1);
 _conv := Scat(fAdd(4 * Product(deconvolve_dims), 1, add(add(mul(b,256),i4),mul(j2,Product(deconvolve_dims))))) * rv_conv * VStack(deconvolve_filt * gf_conv, G_conv);
@@ -478,6 +483,16 @@ public:
             std::cout << "conf := FFTXGlobals.defaultConf();" << std::endl;
 
         std::cout << "name := \""<< name << "_spiral" << "\";" << std::endl;
+        std::cout << "input_dims := [" << sizes.at(0) << "," << sizes.at(1) << "];" << std::endl;
+        std::cout << "deconvolve_dims := [" << sizes.at(0)-2 << "," << sizes.at(1)-2 << "];" << std::endl;
+        std::cout << "dims_Xdir := [" << sizes.at(0)-2 << "," << sizes.at(1)-5 << "];" << std::endl;
+        std::cout << "dims_Ydir := [" << sizes.at(0)-5 << "," << sizes.at(1)-2 << "];" << std::endl;
+        std::cout << "flux_Xdims := [" << sizes.at(0)-4 << "," << sizes.at(1)-5 << "];" << std::endl;
+        std::cout << "flux_Ydims := [" << sizes.at(0)-5 << "," << sizes.at(1)-4 << "];" << std::endl;
+        std::cout << "divergence_Xdims := [" << sizes.at(0)-4 << "," << sizes.at(1)-6 << "];" << std::endl;
+        std::cout << "divergence_Ydims := [" << sizes.at(0)-6 << "," << sizes.at(1)-4 << "];" << std::endl;
+        std::cout << "final_dims := [" << sizes.at(0)-8 << "," << sizes.at(1)-8 << "];" << std::endl;
+        std::cout << proto_script1_5 << std::endl;
         std::cout << proto_script2 << std::endl;
     }
 };
