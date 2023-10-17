@@ -20,8 +20,8 @@ int main(int argc, char** argv) {
   // platform.init(&argc, &argv, true);
   // auto start = std::chrono::high_resolution_clock::now();
   int n,m,k;
-  n = 40;
-  m = 40;
+  n = 136;
+  m = 136;
   k = 4;
 
   std::vector<int> sizes{n,m,k};
