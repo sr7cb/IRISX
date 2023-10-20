@@ -110,6 +110,7 @@ class Executor {
         void execute2(std::string file_name, std::string arch);
         float getKernelTime();
         int parseDataStructure(std::string input);
+        void multiDeviceScheduling(iris_graph graph);
 };
 
 Executor::string_code Executor::hashit(std::string const& inString) {
@@ -474,8 +475,9 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 
         iris_graph_task(graph, task[i], iris_all, NULL);
     }
+    multiDeviceScheduling(graph);
     auto start = std::chrono::high_resolution_clock::now();
-    iris_graph_submit(graph, iris_all, 1);
+    iris_graph_submit(graph, iris_default, 1);
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
 
@@ -571,6 +573,24 @@ void Executor::execute2(std::string input, std::string arch) {
 
 float Executor::getKernelTime() {
     return CPUTime;
+}
+
+void Executor::multiDeviceScheduling(iris_graph graph){
+    int ndevices = 0;
+    iris_device_count(&ndevices);
+    //int dev_map[16][16];
+    int id = 0;  
+	int ntasks = iris_graph_tasks_count(graph);
+    printf(" Number of devices: %d and Number of tasks %d \n", ndevices, ntasks);
+    iris_task *tasks = NULL;
+    if (ntasks > 0)
+        tasks = (iris_task *)malloc(sizeof(iris_task)*ntasks);
+    iris_graph_get_tasks(graph, tasks);
+    for(int i=0; i<ntasks; i++) {
+        iris_task task = tasks[i];
+        //int id = dev_map[r%nrows][c%ncols];
+        iris_task_set_policy(task, id);
+    }
 }
 
 #endif            //  FFTX_MDDFT_HIPBACKEND_HEADER
