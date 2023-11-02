@@ -52,7 +52,7 @@ public:
     }
     void semantics(std::string arch) {
         conf(arch);
-        std::cout << "szcube := [" << sizes.at(0) << ", " << sizes.at(1) << ", " << sizes.at(2) << "];" << std::endl;
+        std::cout << "szcube := [" << sizes.at(args.size()) << ", " << sizes.at(args.size()+1) << ", " << sizes.at(args.size()+2) << "];" << std::endl;
         std::cout << "sign := -1;" << std::endl;
         std::cout << "name := \""<< name << "_spiral" << "\";" << std::endl;
         std::cout << mddft_script << std::endl;
@@ -67,7 +67,7 @@ public:
     }
     void semantics(std::string arch) {
         conf(arch);
-        std::cout << "szcube := [" << sizes.at(0) << ", " << sizes.at(1) << ", " << sizes.at(2) << "];" << std::endl;
+        std::cout << "szcube := [" << sizes.at(args.size()) << ", " << sizes.at(args.size()+1) << ", " << sizes.at(args.size()+2) << "];" << std::endl;
         std::cout << "sign := 1;" << std::endl;
         std::cout << "name := \""<< name << "_spiral" << "\";" << std::endl;
         std::cout << mddft_script << std::endl;

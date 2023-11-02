@@ -4,7 +4,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-result"
 #include <include/interface.hpp>
-#include <include/mddftlib.hpp>
+#include <include/mdprdftlib.hpp>
 #pragma GCC diagnostic pop
 #include <stdio.h>
 #include <iostream>
@@ -12,7 +12,6 @@
 #include <typeinfo>
 #include <string>
 #include <cxxabi.h>
-#include <complex>
 
 static void buildInputBuffer ( double *host_X, std::vector<int> sizes )
 {
@@ -35,11 +34,11 @@ int main(int argc, char** argv) {
   // platform.init(&argc, &argv, true);
   auto start = std::chrono::high_resolution_clock::now();
   int n,m,k;
-  n = 64;
-  m = 64;
-  k = 64;
+  n = 128;
+  m = 128;
+  k = 128;
 
-  std::vector<int> sizes{n*m*k*2, n*m*k*2, n*m*k*2, n, m, k};
+  std::vector<int> sizes{n*m*k*2,n*m*k*2,n*m*k*2, n, m, k};
   double *Y, *X, *sym;
   X = new double[n*m*k*2];
   Y = new double[n*m*k*2];
@@ -51,11 +50,11 @@ int main(int argc, char** argv) {
   // buildInputBuffer(X, sizes);
   std::vector<void*> args{Y,X,sym};
 
-  MDDFTProblem mdp(args,sizes,"mddft");
+  IMDPRDFTProblem imdprdft(args,sizes,"mdprdft");
   
-  mdp.transform();
+  imdprdft.transform();
 
-  std::cout << "kernel execution time is " << mdp.getTime() << std::endl;
+  std::cout << "kernel execution time is " << imdprdft.getTime() << std::endl;
 
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
