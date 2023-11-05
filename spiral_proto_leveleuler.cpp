@@ -51,25 +51,27 @@ int main(int argc, char** argv) {
   // auto start = std::chrono::high_resolution_clock::now();
   std::string mystring;
   int n,m,k;
-  n = 136;
-  m = 136;
+  n = 40;
+  m = 40;
   k = 4;
 
-  std::vector<int> sizes{n,m,k};
+  std::vector<int> sizes{n*m*k, n*m*k, 1, 1, 1, n, m};
   double *Y, *X;
-  X = new double[n*m*k*2];
-  Y = new double[n*m*k*2];
-  std::ifstream myinputfile; 
-  myinputfile.open("input.txt");
+  X = new double[n*m*k];
+  Y = new double[n*m*k];
+  std::ifstream myinputfile;
+  std::string inputfilename = "include/input_" + std::to_string(n) + "_" + std::to_string(m) + ".txt"; 
+  myinputfile.open(inputfilename);
   int x = 0;
   if(myinputfile.is_open()) {
+    std::cout << "file: " << inputfilename << " opened for input read" << std::endl;
       while(myinputfile.good() && x != n*m*k) {
           myinputfile >> mystring;
           X[x] = (std::stod(mystring));
           x++;
       }
   }
-  x = 0;
+
   // for(int i = 0; i < n*m*k*2; i++) {
   //   X[i] = 1.0;
   // }
@@ -87,10 +89,13 @@ int main(int argc, char** argv) {
 
   std::cout << "kernel execution time is " << pp.getTime() << std::endl;
 
-  double * correct_ans = new double(n*m*k);
+  double * correct_ans = new double[(n-8)*(m-8)*k];
   std::ifstream mycorrectoutputfile; 
+  std::string outputfilename = "include/correctresult_" + std::to_string(n) + "_" + std::to_string(m) + ".txt"; 
   mycorrectoutputfile.open("correct_result_proto.txt");
+    x = 0;
   if(mycorrectoutputfile.is_open()) {
+      std::cout << "file: " << outputfilename << " opened for output check" << std::endl;
       while(mycorrectoutputfile.good() && x != (n-8)*(m-8)*k) {
         mycorrectoutputfile >> mystring;
         correct_ans[x] = (std::stod(mystring));
@@ -98,16 +103,6 @@ int main(int argc, char** argv) {
       }
   }
   checkDataHolders(Y, correct_ans, n, m);
-  // auto stop = std::chrono::high_resolution_clock::now();
-  // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-  // std::cout << duration.count() << std::endl;
-  // for(int i = 0; i < 10; i++) {
-  //   std::cout << Y[i] << std::endl;
-  // }
-
-//   printf("%s\n", b);
-
-  // platform.finalize();
 
   return 0;
 }

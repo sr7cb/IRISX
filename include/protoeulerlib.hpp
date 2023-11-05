@@ -440,8 +440,8 @@ SubstTopDown(c2, @(1, specifiers_func, e-> e.id="ker_code13"), g->
     SubstVars(g, rec((c2.cmds[1].vars[1].id) := p5)));
 
 c3 := SubstTopDown(c2.cmds[1].cmd.cmds[2].cmds[3], @(1, add, e-> Length(Collect(e, @(2, var, h-> h.id = c2.cmds[1].vars[1].id))) > 0 and Length(e.args) = 2 ), f -> add(f.args[1], nth(p1, f.args[2].idx)));
-c4 := SubstTopDown(c2.cmds[1].cmd.cmds[2].cmds[7], @(1, add, e-> Length(Collect(e, @(2, var, h-> h.id = c2.cmds[1].vars[3].id))) > 0 and Length(e.args) = 2 ), f -> add(f.args[1], nth(p2, f.args[2].idx)));
-c5 := SubstTopDown(c2.cmds[1].cmd.cmds[2].cmds[13], @(1, add, e-> Length(Collect(e, @(2, var, h-> h.id = c2.cmds[1].vars[3].id))) > 0 and Length(e.args) = 2 ), f -> add(f.args[1], nth(p3, f.args[2].idx)));
+c4 := SubstTopDown(c2.cmds[1].cmd.cmds[2].cmds[7], @(1, add, e->ObjId(e.args[1]) = mul and Length(Collect(e, @(2, var, h-> h.id = c2.cmds[1].vars[3].id))) > 0), f -> add(f.args[1] , nth(p2, f.args[2].idx)));
+c5 := SubstTopDown(c2.cmds[1].cmd.cmds[2].cmds[13], @(1, add, e->ObjId(e.args[1]) = mul and Length(Collect(e, @(2, var, h-> h.id = c2.cmds[1].vars[3].id))) > 0), f -> add(f.args[1], nth(p3, f.args[2].idx)));
 c6 := SubstTopDown(c2.cmds[1].cmd.cmds[2].cmds[16], @(1, add, e-> Length(Collect(e, @(2, var, h-> h.id = c2.cmds[1].vars[1].id))) > 0 and Length(e.args) = 2 ), f -> add(f.args[1], nth(p4, f.args[2].idx)));  
 c2.cmds[1].cmd.cmds[2].cmds[3] := c3;
 c2.cmds[1].cmd.cmds[2].cmds[7] := c4;
@@ -483,15 +483,15 @@ public:
             std::cout << "conf := FFTXGlobals.defaultConf();" << std::endl;
 
         std::cout << "name := \""<< name << "_spiral" << "\";" << std::endl;
-        std::cout << "input_dims := [" << sizes.at(0) << "," << sizes.at(1) << "];" << std::endl;
-        std::cout << "deconvolve_dims := [" << sizes.at(0)-2 << "," << sizes.at(1)-2 << "];" << std::endl;
-        std::cout << "dims_Xdir := [" << sizes.at(0)-2 << "," << sizes.at(1)-5 << "];" << std::endl;
-        std::cout << "dims_Ydir := [" << sizes.at(0)-5 << "," << sizes.at(1)-2 << "];" << std::endl;
-        std::cout << "flux_Xdims := [" << sizes.at(0)-4 << "," << sizes.at(1)-5 << "];" << std::endl;
-        std::cout << "flux_Ydims := [" << sizes.at(0)-5 << "," << sizes.at(1)-4 << "];" << std::endl;
-        std::cout << "divergence_Xdims := [" << sizes.at(0)-4 << "," << sizes.at(1)-6 << "];" << std::endl;
-        std::cout << "divergence_Ydims := [" << sizes.at(0)-6 << "," << sizes.at(1)-4 << "];" << std::endl;
-        std::cout << "final_dims := [" << sizes.at(0)-8 << "," << sizes.at(1)-8 << "];" << std::endl;
+        std::cout << "input_dims := [" << sizes.at(args.size()) << "," << sizes.at(args.size()+1) << "];" << std::endl;
+        std::cout << "deconvolve_dims := [" << sizes.at(args.size())-2 << "," << sizes.at(args.size()+1)-2 << "];" << std::endl;
+        std::cout << "dims_Xdir := [" << sizes.at(args.size())-2 << "," << sizes.at(args.size()+1)-5 << "];" << std::endl;
+        std::cout << "dims_Ydir := [" << sizes.at(args.size())-5 << "," << sizes.at(args.size()+1)-2 << "];" << std::endl;
+        std::cout << "flux_Xdims := [" << sizes.at(args.size())-4 << "," << sizes.at(args.size()+1)-5 << "];" << std::endl;
+        std::cout << "flux_Ydims := [" << sizes.at(args.size())-5 << "," << sizes.at(args.size()+1)-4 << "];" << std::endl;
+        std::cout << "divergence_Xdims := [" << sizes.at(args.size())-4 << "," << sizes.at(args.size()+1)-6 << "];" << std::endl;
+        std::cout << "divergence_Ydims := [" << sizes.at(args.size())-6 << "," << sizes.at(args.size()+1)-4 << "];" << std::endl;
+        std::cout << "final_dims := [" << sizes.at(args.size())-8 << "," << sizes.at(args.size()+1)-8 << "];" << std::endl;
         std::cout << proto_script1_5 << std::endl;
         std::cout << proto_script2 << std::endl;
     }
