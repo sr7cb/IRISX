@@ -72,14 +72,16 @@ int main(int argc, char** argv) {
       }
   }
 
+  for(int i = 0; i < 10; i++)
+    std::cout << X[i] << std::endl;
   // for(int i = 0; i < n*m*k*2; i++) {
   //   X[i] = 1.0;
   // }
 
   double gamma, a_scale, dx;
-  gamma = 1;
-  a_scale = 1;
-  dx = 1;
+  gamma = 1.4;
+  a_scale = 0.00390625;
+  dx = 0.015625;
   // buildInputBuffer(X, sizes);
   std::vector<void*> args{Y,X, &gamma, &a_scale, &dx};
 
@@ -92,7 +94,7 @@ int main(int argc, char** argv) {
   double * correct_ans = new double[(n-8)*(m-8)*k];
   std::ifstream mycorrectoutputfile; 
   std::string outputfilename = "include/correctresult_" + std::to_string(n) + "_" + std::to_string(m) + ".txt"; 
-  mycorrectoutputfile.open("correct_result_proto.txt");
+  mycorrectoutputfile.open(outputfilename);
     x = 0;
   if(mycorrectoutputfile.is_open()) {
       std::cout << "file: " << outputfilename << " opened for output check" << std::endl;
@@ -102,7 +104,9 @@ int main(int argc, char** argv) {
         x++;
       }
   }
-  checkDataHolders(Y, correct_ans, n, m);
+  for(int i = 0; i < 10; i++)
+    std::cout << Y[i] << std::endl;
+  checkDataHolders(Y, correct_ans, 32, 32);
 
   return 0;
 }
