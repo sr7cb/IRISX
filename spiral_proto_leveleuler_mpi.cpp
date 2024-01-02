@@ -1,6 +1,12 @@
 #include <iostream>
 #include "Proto.H"
+// #include "examples/_common/InputParser.H"
+#include "examples/_common/LevelRK4.H"
 #include "include/BoxOp_Euler.hpp"
+
+using namespace Proto;
+
+
 template<typename T, unsigned int C, MemType MEM>
 PROTO_KERNEL_START 
 void f_initialize_(Point& a_pt, Var<T, C, MEM>& a_U, double a_dx, const double a_gamma)
@@ -26,7 +32,11 @@ void f_initialize_(Point& a_pt, Var<T, C, MEM>& a_U, double a_dx, const double a
 PROTO_KERNEL_END(f_initialize_, f_initialize)
 
 
-int main() {
+int main(int argc, char** argv)
+{
+#ifdef PR_MPI
+    MPI_Init(&argc, &argv);
+#endif
 
     // DEFAULT PARAMETERS
     int domainSize = 256;
@@ -49,14 +59,14 @@ int main() {
     double dx = 1.0 / domainSize;
     double dt = 0.25 / domainSize;
     
-    // if (procID() == 0)
-    // {
-    //     std::cout << "dx: " << dx << " | dt: " << dt << std::endl;
-    // }
+    if (procID() == 0)
+    {
+        std::cout << "dx: " << dx << " | dt: " << dt << std::endl;
+    }
      
-    // // INITIALIZE TIMERS
-    // PR_TIMER_SETFILE(to_string(domainSize) + ".DIM" + to_string(DIM) + ".LevelEuler.time.table");
-    // PR_TIMERS("main");
+    // INITIALIZE TIMERS
+    PR_TIMER_SETFILE(to_string(domainSize) + ".DIM" + to_string(DIM) + ".LevelEuler.time.table");
+    PR_TIMERS("main");
     
     // INITIALIZE DOMAIN
     auto domain = Box::Cube(domainSize);
@@ -69,12 +79,38 @@ int main() {
 
     // INITIALIZE DATA
     LevelBoxData<double, OP::numState()> U(layout, OP::ghost());
+    //U.initConvolve(f_initialize, dx, gamma);
     Operator::initConvolve(U, f_initialize, dx, gamma);
-    LevelBoxData<double, OP::numState()> LU(layout, OP::ghost());
-    LevelOp<BoxOp_Euler, double> integrator(layout, dx);
-    
 
-    integrator(LU,U);
+    // DO INTEGRATION
+    LevelRK4<BoxOp_Euler, double> integrator(layout, dx);
+    double time = 0.0;
+#ifdef PR_HDF5
+    HDF5Handler h5;
+#endif
+    std::vector<std::string> varnames(OP::numState());
+    varnames[0] = "rho";
+    for (int ii = 1; ii <= DIM; ii++)
+    {
+        varnames[ii] = ("rho*v"+std::to_string(ii-1));
+    }
+    varnames[DIM+1] = "rho*E";
+#ifdef PR_HDF5
+    h5.writeLevel(varnames, dx, U, "U_0");
+#endif
 
-    return 0;
+    for (int k = 0; ((k < maxStep) && (time < maxTime)); k++)
+    {
+        integrator.advance(U, dt, time);
+        if ((k+1) % outputInterval == 0)
+        {
+#ifdef PR_HDF5
+            h5.writeLevel(varnames, dx, U, "U_%i", k+1);
+#endif
+        }
+        time += dt;
+    }
+#ifdef PR_MPI
+    MPI_Finalize();
+#endif
 }
