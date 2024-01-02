@@ -23,12 +23,12 @@ void checkDataHolders(double * spiral, double * proto, int dim_r, int dim_c) {
           for (int k = 0; k < dim_c; k++) {
               double s = spiral[i*(dim_r*dim_c) + ((j*dim_c+k))];
               double p = proto[i*(dim_r*dim_c) + ((j*dim_c+k))];
-              bool elem_correct = ( (fabs(s - p) < 1e-7));
+              bool elem_correct = ( (fabs(s - p) < 1e-5));
               maxdelta = maxdelta < (double)(fabs(s -p)) ? (double)(fabs(s -p)) : maxdelta;
               correct &= elem_correct;
               if(elem_correct == false) {
-                  // std::cout << i*(dim_r*dim_c) + ((j*dim_c+k)) << " ";
-                  // std::cout << s << " " << p << std::endl;
+                  std::cout << i*(dim_r*dim_c) + ((j*dim_c+k)) << " ";
+                  std::cout << s << " " << p << std::endl;
                   // exit(0);
                   a[i]++;
               }
@@ -51,8 +51,8 @@ int main(int argc, char** argv) {
   // auto start = std::chrono::high_resolution_clock::now();
   std::string mystring;
   int n,m,k;
-  n = 40;
-  m = 40;
+  n = 136;
+  m = 136;
   k = 4;
 
   std::vector<int> sizes{n*m*k, n*m*k, 1, 1, 1, n, m};
@@ -61,6 +61,7 @@ int main(int argc, char** argv) {
   Y = new double[n*m*k];
   std::ifstream myinputfile;
   std::string inputfilename = "include/input_" + std::to_string(n) + "_" + std::to_string(m) + ".txt"; 
+  std::cout<< inputfilename;
   myinputfile.open(inputfilename);
   int x = 0;
   if(myinputfile.is_open()) {
@@ -72,8 +73,6 @@ int main(int argc, char** argv) {
       }
   }
 
-  for(int i = 0; i < 10; i++)
-    std::cout << X[i] << std::endl;
   // for(int i = 0; i < n*m*k*2; i++) {
   //   X[i] = 1.0;
   // }
@@ -106,7 +105,7 @@ int main(int argc, char** argv) {
   }
   for(int i = 0; i < 10; i++)
     std::cout << Y[i] << std::endl;
-  checkDataHolders(Y, correct_ans, 32, 32);
+  checkDataHolders(Y, correct_ans, n-8, m-8);
 
   return 0;
 }

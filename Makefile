@@ -1,12 +1,18 @@
 IRIS_PATH=${IRIS}
+PROTO_PATH=/home/sanilr/proto
+CONSTANTS= -DDIM=2 -DHDF5=off -DMPI=on
 LDFLAGS=-L$(IRIS)/lib64 -L$(IRIS)/lib -liris -lpthread -ldl
-CFLAGS=-g
+CFLAGS=-pg
+
+
+proto_mpi:
+	g++ --std=c++17 -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -Wunused-result -O3 $(CONSTANTS) -o spiral_proto_mpi spiral_proto_leveleuler_mpi.cpp $(LDFLAGS)
 
 proto:
-	g++ -I$(IRIS_PATH)/include -I. -Wunused-result -O3 $(CFLAGS) -o spiral_proto spiral_proto_leveleuler.cpp $(LDFLAGS)
+	g++ -I$(IRIS_PATH)/include -I. -Wunused-result -ggdb -O3 $(CFLAGS) -o spiral_proto spiral_proto_leveleuler.cpp $(LDFLAGS)
 
 mddft:
-	g++ -I$(IRIS_PATH)/include -I. -Wunused-result -O3 $(CFLAGS) -o spiral_iris_mddft spiral_iris_mddft.cpp $(LDFLAGS)
+	g++ -I$(IRIS_PATH)/include -I. -Wunused-result $(CFLAGS) -o spiral_iris_mddft spiral_iris_mddft.cpp $(LDFLAGS)
 
 mdprdft:
 	g++ -I$(IRIS_PATH)/include -I. -Wunused-result -O3 $(CFLAGS) -o spiral_iris_mdprdft spiral_iris_mdprdft.cpp $(LDFLAGS)
