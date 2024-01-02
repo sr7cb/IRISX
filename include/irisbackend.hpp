@@ -315,8 +315,11 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         iris_mem * mem_Y = new iris_mem;
         iris_mem * mem_sym = new iris_mem;
         iris_data_mem_create(mem_Y, args.at(0), sizes.at(0) * sizeof(double));
+        iris_register_pin_memory(args.at(0), sizes.at(0) * sizeof(double));
         iris_data_mem_create(mem_X, args.at(1), sizes.at(1) * sizeof(double));
+        iris_register_pin_memory(args.at(1), sizes.at(1) * sizeof(double));
         iris_data_mem_create(mem_sym, args.at(2), sizes.at(2) * sizeof(double));
+        iris_register_pin_memory(args.at(2), sizes.at(2) * sizeof(double));
         params.push_back(mem_Y);
         params.push_back(mem_X);
         params.push_back(mem_sym);
@@ -338,6 +341,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                     iris_mem * mem_p = new iris_mem;
                     iris_data_mem_create(mem_p, args.at(i), 
                         sizes.at(i) * sizeof(int));
+                    iris_register_pin_memory(args.at(i), sizes.at(i) * sizeof(int));
                     params.push_back(mem_p);
                     arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
                     number_params++;
@@ -348,6 +352,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                     iris_mem * mem_p = new iris_mem;
                     iris_data_mem_create(mem_p, args.at(i), 
                         sizes.at(i) * sizeof(float));
+                    iris_register_pin_memory(args.at(i), sizes.at(i) * sizeof(float));
                     params.push_back(mem_p);
                     arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
                     number_params++;
@@ -358,6 +363,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                     iris_mem * mem_p = new iris_mem;
                     iris_data_mem_create(mem_p, args.at(i), 
                         sizes.at(i) * sizeof(double));
+                    iris_register_pin_memory(args.at(i), sizes.at(i) * sizeof(double));
                     params.push_back(mem_p);
                     arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
                     number_params++;
@@ -389,6 +395,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
             {
                 iris_mem * mem_p = new iris_mem;
     		    iris_data_mem_create(mem_p, data.at(i), data_lengths.at(i) * sizeof(double));
+                iris_register_pin_memory(data.at(i), data_lengths.at(i) * sizeof(double));
                 params.push_back(mem_p);
                 pointers++;
                 arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
@@ -399,6 +406,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
             {
                 iris_mem * mem_p = new iris_mem;
                 iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(int));
+                iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(int));
                 params.push_back(mem_p);
                 pointers++;
                 arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
@@ -409,6 +417,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
             {
                 iris_mem * mem_p = new iris_mem;
                 iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(float));
+                iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(float));
                 params.push_back(mem_p);
                 pointers++;
                 arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
@@ -419,6 +428,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
             {
                 iris_mem * mem_p = new iris_mem;
     		    iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
+                iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
                 params.push_back(mem_p);
                 pointers++;
                 arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
@@ -429,6 +439,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
             {
                 iris_mem * mem_p = new iris_mem;
     		    iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
+                //iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
                 params.push_back(mem_p);
                 pointers++;
                 arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
