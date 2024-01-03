@@ -239,7 +239,11 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
             T                                       a_scale = 1.0) const
     {
         T dx = this->dx()[0];
-        PR_TIME("BoxOp_Euler::operator()");        
+        PR_TIME("BoxOp_Euler::operator()");  
+
+         a_Rhs.setVal(0.0);        
+        for(int i = 0; i < 10; i++)
+          std::cout << a_Rhs.data()[i] << std::endl;
         // COMPUTE W_AVE
         int n,m,k;
         n = 136;
@@ -251,7 +255,11 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
         ProtoProblem pp(args,sizes,"level_euler");
   
         pp.transform();
-        // a_Rhs.setVal(0.0);    
+        
+        for(int i = 0; i < 10; i++)
+          std::cout << a_Rhs.data()[i] << std::endl;
+
+        
         // Vector W_bar = forall<double, NUMCOMPS>(f_consToPrim, a_U, gamma);
         // Vector U = Operator::deconvolve(a_U);
         // Vector W = forall<double, NUMCOMPS>(f_consToPrim, U, gamma);

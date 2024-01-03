@@ -41,8 +41,10 @@ int main(int argc, char** argv)
     // DEFAULT PARAMETERS
     int domainSize = 256;
     int boxSize = 128;
-    double maxTime = 1.0;
-    int maxStep = 10;
+    // double maxTime = 1.0;
+    // int maxStep = 10;
+    double maxTime = 0.25 / domainSize;
+    int maxStep = 1;
     int outputInterval = 1;
     double gamma = 1.4;
     
@@ -109,6 +111,7 @@ int main(int argc, char** argv)
 #endif
         }
         time += dt;
+        std::cout << k << " " << maxStep << " " << time << " " << maxTime << std::endl;
     }
 #ifdef PR_MPI
     MPI_Finalize();

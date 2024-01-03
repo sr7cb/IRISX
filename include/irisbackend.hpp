@@ -179,6 +179,7 @@ int Executor::parseDataStructure(std::string input) {
                 int loc = atoi(words.at(1).c_str());
                 int size = atoi(words.at(2).c_str());
                 int dt = atoi(words.at(3).c_str());
+                if(DEBUGOUT)
                 std::cout << loc << ":" << dt << std::endl;
                 //convert this to a string because spiral prints string type
                 switch(dt) {
@@ -216,6 +217,7 @@ int Executor::parseDataStructure(std::string input) {
                     }
                     case 2: //double
                     {
+                      if(DEBUGOUT)
                         std::cout << "This is the words size double\n" << words.size() << std::endl;
                         if(words.size() < 5) {
                             double * data1 = new double[size];
@@ -235,6 +237,7 @@ int Executor::parseDataStructure(std::string input) {
                     }
                     case 3: //constant
                     {
+                      if(DEBUGOUT)
                         std::cout << "This is the words size constant\n" << words.size() << std::endl;
                         if(words.size() < 5) {
                             double * data1 = new double[size];
@@ -329,6 +332,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 
     } else {
         for(int i = 0; i < sig_types.size(); i++) {
+          if(DEBUGOUT)
             std::cout << std::get<0>(sig_types.at(i)) << ":" << std::get<1>(sig_types.at(i)) << std::endl;
             std::string type = std::get<1>(sig_types.at(i));
             switch(hashit(type)) {
@@ -389,6 +393,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
     int pointers = 0;
     for(int i = 0; i < device_names.size(); i++) {
         std::string test = std::get<2>(device_names[i]);
+        if(DEBUGOUT)
         std::cout << std::get<0>(device_names[i]) << ":" << test << std::endl;
         switch(hashit(test)) {
             case constant:
@@ -461,9 +466,10 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 
     iris_task task[kernel_names.size()];
     for(int i = 0; i < kernel_names.size(); i++) {
+      if(DEBUGOUT) {
         std::cout << "number of kernels is: " << kernel_names.size() << std::endl;
         std::cout << "kernel name: " << kernel_names.at(i) << std::endl;
-
+      }
         iris_task_create(&task[i]);
         std::vector<void*> local_params;
         std::vector<int> local_params_info; 
@@ -475,8 +481,10 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
             std::vector<size_t> grid{(size_t)kernel_params[i*6]*kernel_params[i*6+3], (size_t)kernel_params[i*6+1]*kernel_params[i*6+4], (size_t)kernel_params[i*6+2]*kernel_params[i*6+5]};
             std::vector<size_t> block{(size_t)kernel_params[i*6+3], (size_t)kernel_params[i*6+4], (size_t)kernel_params[i*6+5]};
             for(int j = 0; j < kernel_args.at(i).size(); j++) {
+              if(DEBUGOUT) 
                 std::cout << " the first kernel arg " << kernel_args.at(i).at(j) << std::endl;
                 if(arg2index.find(kernel_args.at(i).at(j)) != arg2index.end()) {
+                  if(DEBUGOUT) 
                     std::cout <<" the second kernel arg " << arg2index.at(kernel_args.at(i).at(j)) << std::endl;
                     local_params.push_back(params.at(arg2index.at(kernel_args.at(i).at(j))));
                     local_params_info.push_back(std::get<1>(new_params_info.at(i).at(j)));
@@ -546,20 +554,25 @@ void Executor::execute() {
 }
 
 void Executor::execute2(std::string input, std::string arch) {
+  if(DEBUGOUT)
     std::cout << "arch in execute2 " << arch << std::endl;
     if((arch == "cuda" || arch == "hip") && parsed == 0 && !findOpenMP()) {
         parsed = parseDataStructure ( input );
+        if(DEBUGOUT)
         std::cout << "parsed " << parsed << std::endl;
     } else {
+      if(DEBUGOUT)
         std::cout << "got into else branch for 1 kernel\n";
         if(kernel_names.size() == 0)
             kernel_names.push_back("iris_spiral_kernel");
     }
     if(arch == "cuda") {
+      if(DEBUGOUT)
         std::cout << "in cuda code portion\n";
         system("nvcc -Xcudafe --diag_suppress=declared_but_not_referenced -ptx kernel.cu");
     }
     else if(arch == "hip") {
+      if(DEBUGOUT)
         std::cout << "in hip code portion\n";
         system("hipcc --genco -o kernel.hip kernel.hip.cpp");
     }
@@ -582,6 +595,7 @@ void Executor::execute2(std::string input, std::string arch) {
             command.append(" -O3 -std=c99");
             command.append(" -fopenmp -march=native -mavx2 -fPIC -shared -I. -o kernel.openmp.so kernel_openmp.c");
         }
+        if(DEBUGOUT)
         std::cout << command << std::endl;
         system(command.c_str());
     }
