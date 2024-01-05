@@ -7,7 +7,7 @@ MPI_LINK_FLAGS = $(shell mpicc --showme:link)
 CFLAGS=-pg
 
 proto_no_mpi:
-	g++ --std=c++17 -ggdb -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH) -O3 -DDIM=2 -DHDF5=off  -o spiral_proto_no_mpi spiral_proto_leveleuler_mpi.cpp $(LDFLAGS) 
+	g++ --std=c++17 -ggdb -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH) -O3 -DDIM=2 -DHDF5=off -DPRINTDEBUG  -o spiral_proto_no_mpi spiral_proto_leveleuler_mpi.cpp $(LDFLAGS) 
 
 
 proto_mpi:

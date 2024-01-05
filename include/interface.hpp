@@ -178,7 +178,8 @@ void printIRISBackend(std::string name, std::vector<int> sizes, std::string arch
 
 class FFTXProblem {
 public:
-
+    Executor e;
+    bool gen_executor = false;
     std::vector<void*> args;
     std::vector<int> sizes;
     std::string res;
@@ -221,7 +222,7 @@ public:
     virtual void randomProblemInstance() = 0;
     virtual void semantics(std::string arch) = 0;
     float gpuTime;
-    void run(Executor e);
+    void run();
     std::string returnJIT();
     float getTime();
     ~FFTXProblem(){}
@@ -365,9 +366,9 @@ void FFTXProblem::transform(){
     //     //end time
     // }
     // else { // use RTC
-        if(executors.find(sizes) != executors.end()) { //check in memory cache
+        if(gen_executor == true) { //check in memory cache
             if ( DEBUGOUT) std::cout << "cached size found, running cached instance\n";
-            run(executors.at(sizes));
+            run();
         }
         else { //check filesystem cache
             // std::string tmp = getFFTX();
@@ -403,10 +404,11 @@ void FFTXProblem::transform(){
                         res = semantics2(word);
                 }
             }
-            Executor e;
+            
             e.execute();
-            executors.insert(std::make_pair(sizes, e));
-            run(e);
+            run();
+            gen_executor = true;
+            // executors.insert(std::make_pair(sizes, e));
             // else { //generate code at runtime
             //     std::cout << "haven't seen size, generating\n";
             //     res = semantics2();
@@ -420,13 +422,8 @@ void FFTXProblem::transform(){
 }
 
 
-void FFTXProblem::run(Executor e) {
-    gpuTime = e.initAndLaunch(args, sizes, name);
-    // #if (defined FFTX_HIP || FFTX_CUDA)
-    // gpuTime = e.initAndLaunch(args);
-    // #else
-    // gpuTime = e.initAndLaunch(args, name);
-    // #endif
+void FFTXProblem::run() {
+  gpuTime = e.initAndLaunch(args, sizes, name);
 }
 
 float FFTXProblem::getTime() {

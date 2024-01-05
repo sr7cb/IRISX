@@ -107,6 +107,9 @@ class Executor {
         std::vector<int> data_lengths;
         void * shared_lib;
         float CPUTime;
+        int graph_created;
+        iris_graph graph;
+        iris_mem io[2];
     public:
         string_code hashit(std::string const& inString);
         float initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, std::string name);
@@ -114,7 +117,10 @@ class Executor {
         void execute2(std::string file_name, std::string arch);
         float getKernelTime();
         int parseDataStructure(std::string input);
-        void multiDeviceScheduling(iris_graph graph);
+        void multiDeviceScheduling();
+        void createGraph(std::vector<void*>& args, std::vector<int> sizes, std::string name);
+        int getGraphCreated();
+        std::string getKernels();
 };
 
 Executor::string_code Executor::hashit(std::string const& inString) {
@@ -274,13 +280,12 @@ int Executor::parseDataStructure(std::string input) {
     return 1;
 }
 
-
-float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, std::string name) {
-    iris::Platform platform;
-    platform.init(NULL, NULL, true);
+void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std::string name) {
+    // iris::Platform platform;
+    // platform.init(NULL, NULL, true);
     // size_t size = sizes.at(0) * sizes.at(1) * sizes.at(2);
     if ( DEBUGOUT) {
-        std::cout << "In init and launch" << std::endl;
+        std::cout << "In create and run graph" << std::endl;
         for(int i = 0; i < sizes.size(); i++) {
             std::cout << "size " << i << ": " << sizes.at(i) << " ";
         }
@@ -364,11 +369,19 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
                 }
                 case pointer_double:
                 {
+                    if(i == 0 || i == 1) {
+                      iris_data_mem_create(&io[i], args.at(i), 
+                        sizes.at(i) * sizeof(double));
+                    params.push_back(&io[i]);
+                    }
+                    else{
                     iris_mem * mem_p = new iris_mem;
                     iris_data_mem_create(mem_p, args.at(i), 
                         sizes.at(i) * sizeof(double));
-                    iris_register_pin_memory(args.at(i), sizes.at(i) * sizeof(double));
                     params.push_back(mem_p);
+                    }
+                    iris_register_pin_memory(args.at(i), sizes.at(i) * sizeof(double));
+                    // params.push_back(mem_p);
                     arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
                     number_params++;
                     break;
@@ -461,7 +474,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
     //     for(int j = 0; j < new_params_info.at(i).size(); j++)
     //         std::cout << std::get<0>(new_params_info.at(i).at(j)) << " " << std::get<1>(new_params_info.at(i).at(j)) << std::endl;
     // }
-    iris_graph graph;
+    // iris_graph graph;
     iris_graph_create(&graph);
 
     iris_task task[kernel_names.size()];
@@ -498,20 +511,45 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
         }
 
 	    if(i == kernel_names.size() -1)   
-            iris_task_dmem_flush_out(task[i], *(iris_mem*)local_params.at(0));
+            // iris_task_dmem_flush_out(task[i], *(iris_mem*)local_params.at(0));
+          iris_task_d2h_full(task[i], *(iris_mem*)local_params.at(0), args.at(0));  
 
         iris_graph_task(graph, task[i], iris_gpu, NULL);
     }
-    multiDeviceScheduling(graph);
-    auto start = std::chrono::high_resolution_clock::now();
-    iris_graph_submit(graph, iris_default, 1);
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    multiDeviceScheduling();
+    // auto start = std::chrono::high_resolution_clock::now();
+    // iris_graph_submit(graph, iris_default, 1);
+    // auto stop = std::chrono::high_resolution_clock::now();
+    // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
 
-    std::cout << "time for iris is" << duration.count() << "us" << std::endl;
-    platform.finalize();
-    return getKernelTime();
+    // std::cout << "time for iris is" << duration.count() << "us" << std::endl;
+    // platform.finalize();
+    // return getKernelTime();
 }
+
+float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, std::string name) {
+  // iris::Platform platform;
+  // platform.init(NULL, NULL, true);
+  if(graph_created == 0) {
+    createGraph(args, sizes, name);
+    iris_graph_retain(graph, true);
+    graph_created = 1;
+    if(DEBUGOUT)
+    std::cout << "has the graph been created " << graph_created << std::endl;
+  }
+  iris_data_mem_update(io[0], args.at(0));
+  iris_data_mem_update(io[1], args.at(1));
+  if(DEBUGOUT)
+    std::cout << "Executing graph" << std::endl;
+  auto start = std::chrono::high_resolution_clock::now();
+  iris_graph_submit(graph, iris_default, 1);
+  iris_graph_wait(graph);
+  auto stop = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+  // platform.finalize();
+  return getKernelTime();
+}
+
 
 void Executor::execute() {
     if(DEBUGOUT)
@@ -604,11 +642,17 @@ void Executor::execute2(std::string input, std::string arch) {
 
 }
 
+int Executor::getGraphCreated() {
+  std::cout << "Get graph created: " << graph_created << std::endl;
+  return graph_created;
+}
+
+
 float Executor::getKernelTime() {
     return CPUTime;
 }
 
-void Executor::multiDeviceScheduling(iris_graph graph){
+void Executor::multiDeviceScheduling(){
     int ndevices = 0;
     iris_device_count(&ndevices);
     //int dev_map[16][16];

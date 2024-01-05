@@ -18,6 +18,8 @@ using namespace Proto;
 typedef BoxData<double> Scalar;
 typedef BoxData<double, NUMCOMPS> Vector;
 
+
+ ProtoProblem pp; //declares our IRISX problem // codegeneration 
 //State: [rho, G0, G1, ..., E]
 // Gi = rho*vi
 // E = p/(gamma-1) + 0.5*rho*|v|^2
@@ -241,21 +243,25 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
         T dx = this->dx()[0];
         PR_TIME("BoxOp_Euler::operator()");  
 
-         a_Rhs.setVal(0.0);        
+         a_Rhs.setVal(0.0);
+           
         for(int i = 0; i < 10; i++)
           std::cout << a_Rhs.data()[i] << std::endl;
         // COMPUTE W_AVE
         int n,m,k;
-        n = 136;
-        m = 136;
+        n = 136; //40
+        m = 136; //40
         k = 4;
-        std::vector<int> sizes{n*m*k, n*m*k, 1, 1, 1, n, m};
+        std::vector<int> sizes{(n-8)*(m-8)*k, n*m*k, 1, 1, 1, n, m};
+    
         std::vector<void*> args{a_Rhs.data(), (void*)a_U.data(), (void*)&gamma, (void*)&a_scale, (void*)&dx};
-
-        ProtoProblem pp(args,sizes,"level_euler");
-  
-        pp.transform();
+        std::cout << a_Rhs.data() << std::endl;
+        std::cout << a_U.data() << std::endl;
+        pp.setArgs(args);
+        pp.setSizes(sizes);
+        pp.transform(); // goes to iris runtime and creates/executes task graph
         
+       
         for(int i = 0; i < 10; i++)
           std::cout << a_Rhs.data()[i] << std::endl;
 

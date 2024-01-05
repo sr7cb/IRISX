@@ -30,8 +30,8 @@ static void buildInputBuffer ( double *host_X, std::vector<int> sizes )
 int main(int argc, char** argv) {
   // getIRISARCH();
   // std::cout << getIRISARCH() << std::endl;
-  // iris::Platform platform;
-  // platform.init(&argc, &argv, true);
+  iris::Platform platform;
+  platform.init(&argc, &argv, true);
   auto start = std::chrono::high_resolution_clock::now();
   int n,m,k;
   n = 128;
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
 
 //   printf("%s\n", b);
 
-  // platform.finalize();
+  platform.finalize();
 
   return 0;
 }

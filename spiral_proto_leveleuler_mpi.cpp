@@ -34,13 +34,17 @@ PROTO_KERNEL_END(f_initialize_, f_initialize)
 
 int main(int argc, char** argv)
 {
+
+  iris_init(&argc, &argv, 1);
+
+
 #ifdef PR_MPI
     MPI_Init(&argc, &argv);
 #endif
 
     // DEFAULT PARAMETERS
-    int domainSize = 256;
-    int boxSize = 128;
+    int domainSize = 256; //64
+    int boxSize = 128; //32
     // double maxTime = 1.0;
     // int maxStep = 10;
     double maxTime = 0.25 / domainSize;
@@ -102,6 +106,7 @@ int main(int argc, char** argv)
 #endif
 
     for (int k = 0; ((k < maxStep) && (time < maxTime)); k++)
+    // for (int k = 0; k < 1; k++)
     {
         integrator.advance(U, dt, time);
         if ((k+1) % outputInterval == 0)
@@ -116,4 +121,5 @@ int main(int argc, char** argv)
 #ifdef PR_MPI
     MPI_Finalize();
 #endif
+  iris_finalize();
 }

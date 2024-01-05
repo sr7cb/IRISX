@@ -46,8 +46,8 @@ void checkDataHolders(double * spiral, double * proto, int dim_r, int dim_c) {
 int main(int argc, char** argv) {
   // getIRISARCH();
   // std::cout << getIRISARCH() << std::endl;
-  // iris::Platform platform;
-  // platform.init(&argc, &argv, true);
+  iris::Platform platform;
+  platform.init(&argc, &argv, true);
   // auto start = std::chrono::high_resolution_clock::now();
   std::string mystring;
   int n,m,k;
@@ -82,14 +82,14 @@ int main(int argc, char** argv) {
   a_scale = 0.00390625;
   dx = 0.015625;
   // buildInputBuffer(X, sizes);
-  std::vector<void*> args{Y,X, &gamma, &a_scale, &dx};
-
-  ProtoProblem pp(args,sizes,"level_euler");
-  
+    std::vector<void*> args{Y,X, &gamma, &a_scale, &dx};
+    ProtoProblem pp(args,sizes,"level_euler");
+  for(int i = 0; i < 1; i++) {
+  std::cout << pp.gpuTime << std::endl;
   pp.transform();
-
+  std::cout << pp.gpuTime << std::endl;
   std::cout << "kernel execution time is " << pp.getTime() << std::endl;
-
+  }
   double * correct_ans = new double[(n-8)*(m-8)*k];
   std::ifstream mycorrectoutputfile; 
   std::string outputfilename = "include/correctresult_" + std::to_string(n) + "_" + std::to_string(m) + ".txt"; 
@@ -107,5 +107,6 @@ int main(int argc, char** argv) {
     std::cout << Y[i] << std::endl;
   checkDataHolders(Y, correct_ans, n-8, m-8);
 
+  platform.finalize();
   return 0;
 }
