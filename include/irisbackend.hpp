@@ -66,6 +66,7 @@ std::string getIRIS() {
 }
 
 std::string getIRISARCH();
+std::string getIRISX();
 
 bool findOpenMP() {
     if(getIRISARCH().find("openmp") != std::string::npos) {
@@ -119,6 +120,7 @@ class Executor {
         int parseDataStructure(std::string input);
         void multiDeviceScheduling();
         void createGraph(std::vector<void*>& args, std::vector<int> sizes, std::string name);
+        void retainGraph();
         int getGraphCreated();
         std::string getKernels();
 };
@@ -527,6 +529,11 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
     // return getKernelTime();
 }
 
+void Executor::retainGraph(){
+    iris_graph_retain(graph, true);
+    graph_created = 1;
+}
+
 float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, std::string name) {
   // iris::Platform platform;
   // platform.init(NULL, NULL, true);
@@ -541,11 +548,13 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
   iris_data_mem_update(io[1], args.at(1));
   if(DEBUGOUT)
     std::cout << "Executing graph" << std::endl;
+//   std::cout << "executing graph" << std::endl;
   auto start = std::chrono::high_resolution_clock::now();
   iris_graph_submit(graph, iris_default, 1);
   iris_graph_wait(graph);
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+//   std::cout << "The time is " << duration.count() << std::endl;
   // platform.finalize();
   return getKernelTime();
 }
@@ -578,7 +587,10 @@ void Executor::execute() {
             oss << "kernel_openmp.c";
         else
             oss << "borken";
-        std::string file_name = oss.str();
+        // std::string file_name = oss.str();
+        //  std::string full_path = "/global/homes/s/sanilr/FFTX_IRIS/";
+        // full_path.append(oss.str());
+        std::string file_name = getIRISX().append("/" + oss.str());
         std::ifstream ifs ( file_name );
         if(ifs) {
             std::string fcontent ( ( std::istreambuf_iterator<char>(ifs) ),
@@ -607,12 +619,16 @@ void Executor::execute2(std::string input, std::string arch) {
     if(arch == "cuda") {
       if(DEBUGOUT)
         std::cout << "in cuda code portion\n";
-        system("nvcc -Xcudafe --diag_suppress=declared_but_not_referenced -ptx kernel.cu");
+        std::string command;
+        command.append("nvcc -Xcudafe --diag_suppress=declared_but_not_referenced -ptx" + getIRISX() + "/kernel.cu");
+        system(command.c_str());
     }
     else if(arch == "hip") {
       if(DEBUGOUT)
         std::cout << "in hip code portion\n";
-        system("hipcc --genco -o kernel.hip kernel.hip.cpp");
+        std::string command;
+        command.append("hipcc --genco -o kernel.hip" + getIRISX() + "/kernel.hip.cpp");
+        system(command.c_str());
     }
     else {
         std::string command;

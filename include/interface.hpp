@@ -125,14 +125,14 @@ std::string getIRISARCH() {
     return tmp;
 }
 
-std::string getFFTX() {
-     const char * tmp2 = std::getenv("FFTX_HOME");
+std::string getIRISX() {
+     const char * tmp2 = std::getenv("IRISX_HOME");
     std::string tmp(tmp2 ? tmp2 : "");
     if (tmp.empty()) {
-        std::cout << "[ERROR] No such variable found, please download and set FFTX_HOME env variable" << std::endl;
+        std::cout << "[ERROR] No such variable found, please download and set IRISX_HOME env variable" << std::endl;
         exit(-1);
     }
-    tmp += "/cache_jit_files/"; 
+    // tmp += "/cache_jit_files/"; 
     return tmp;
 }
 
@@ -218,6 +218,7 @@ public:
     void setArgs(const std::vector<void*>& args1);
     void setName(std::string name);
     void transform();
+    void createGraph();
     std::string semantics2(std::string arch);
     virtual void randomProblemInstance() = 0;
     virtual void semantics(std::string arch) = 0;
@@ -337,6 +338,57 @@ std::string FFTXProblem::semantics2(std::string arch) {
     // return "cuda";
 }
 
+void FFTXProblem::createGraph(){
+
+    if(gen_executor == true) { //check in memory cache
+        if ( DEBUGOUT) std::cout << "cached size found, running cached instance\n";
+        run();
+    }
+    else { //check filesystem cache
+        // std::string tmp = getFFTX();
+        std::string flag = "";
+        if(getIRISARCH().find("openmp") != std::string::npos) {
+            flag = "openmp";
+        }
+        std::stringstream ss(getIRISARCH());
+        std::string word;
+        while (!ss.eof()) {
+            std::ostringstream oss;
+            std::getline(ss, word, ':');
+            std::cout << "looking for arch " << word << std::endl;
+            if(word == "cuda" && flag == "")
+                oss << "kerneljit.cu";
+            else if(word == "cuda" && flag == "openmp") 
+                oss << "kernel_host2cuda.cu";
+            else if(word == "hip" && flag == "")
+                oss << "kerneljit.hip.cpp";
+            else if(word == "hip" && flag == "openmp")
+                oss << "kernel_host2hip.c";
+            else if(word == "openmp") 
+                oss << "kernel_openmp.c";
+            else
+                oss << "borken";
+            // std::string file_name = oss.str();
+            //     std::string full_path = "/global/homes/s/sanilr/FFTX_IRIS/";
+            // full_path.append(oss.str());
+            std::string file_name = getIRISX().append("/" + oss.str());
+            std::ifstream ifs ( file_name );
+            if(!ifs) {
+                std::cout << "arch " << word << " not found" << std::endl;
+                if(word != "openmp")
+                    res = semantics2(word+flag); 
+                else
+                    res = semantics2(word);
+            }
+        }
+        
+        e.execute();
+        e.createGraph(args, sizes, name);
+        e.retainGraph();
+        gen_executor = true;
+    }
+}
+
 
 void FFTXProblem::transform(){
 
@@ -394,7 +446,10 @@ void FFTXProblem::transform(){
                     oss << "kernel_openmp.c";
                 else
                     oss << "borken";
-                std::string file_name = oss.str();
+                // std::string file_name = oss.str();
+                //  std::string full_path = "/global/homes/s/sanilr/FFTX_IRIS/";
+                // full_path.append(oss.str());
+                std::string file_name = getIRISX().append("/" + oss.str());
                 std::ifstream ifs ( file_name );
                 if(!ifs) {
                     std::cout << "arch " << word << " not found" << std::endl;

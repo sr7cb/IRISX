@@ -5,8 +5,7 @@
 #include "Proto.H"
 // #include <iris/iris.hpp>
 // #include <iris/iris_openmp.h>
-#include <vector>
-#include <chrono>
+// #include <vector>
 // #pragma GCC diagnostic push
 // #pragma GCC diagnostic ignored "-Wunused-result"
 // #include <include/interface.hpp>
@@ -19,9 +18,6 @@ using namespace Proto;
 typedef BoxData<double> Scalar;
 typedef BoxData<double, NUMCOMPS> Vector;
 
-#if defined IRIS
- ProtoProblem pp; //declares our IRISX problem // codegeneration 
-#endif
 //State: [rho, G0, G1, ..., E]
 // Gi = rho*vi
 // E = p/(gamma-1) + 0.5*rho*|v|^2
@@ -246,49 +242,48 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
         PR_TIME("BoxOp_Euler::operator()");  
 
          a_Rhs.setVal(0.0);
-        auto start = std::chrono::high_resolution_clock::now();   
+        auto start = std::chrono::high_resolution_clock::now();    
         // for(int i = 0; i < 10; i++)
         //   std::cout << a_Rhs.data()[i] << std::endl;
         // // COMPUTE W_AVE
-        // int n,m,k;
-        // n = 136; //40
-        // m = 136; //40
-        // k = 4;
-        // std::vector<int> sizes{(n-8)*(m-8)*k, n*m*k, 1, 1, 1, n, m};
+        int n,m,k;
+        n = 136; //40
+        m = 136; //40
+        k = 4;
+        std::vector<int> sizes{(n-8)*(m-8)*k, n*m*k, 1, 1, 1, n, m};
     
-        // std::vector<void*> args{a_Rhs.data(), (void*)a_U.data(), (void*)&gamma, (void*)&a_scale, (void*)&dx};
+        std::vector<void*> args{a_Rhs.data(), (void*)a_U.data(), (void*)&gamma, (void*)&a_scale, (void*)&dx};
         // std::cout << a_Rhs.data() << std::endl;
         // std::cout << a_U.data() << std::endl;
-        // pp.setArgs(args);
-        // pp.setSizes(sizes);
-        // pp.transform(); // goes to iris runtime and creates/executes task graph
-        
-       
+        pp.setArgs(args);
+        pp.setSizes(sizes);
+        pp.transform(); // goes to iris runtime and creates/executes task graph
+        // pp.run();
+
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        std::cout << "The time is " << duration.count() << std::endl;
         // for(int i = 0; i < 10; i++)
         //   std::cout << a_Rhs.data()[i] << std::endl;
 
         
-        Vector W_bar = forall<double, NUMCOMPS>(f_consToPrim, a_U, gamma);
-        Vector U = Operator::deconvolve(a_U);
-        Vector W = forall<double, NUMCOMPS>(f_consToPrim, U, gamma);
-        Vector W_ave = Operator::_convolve(W, W_bar);
+        // Vector W_bar = forall<double, NUMCOMPS>(f_consToPrim, a_U, gamma);
+        // Vector U = Operator::deconvolve(a_U);
+        // Vector W = forall<double, NUMCOMPS>(f_consToPrim, U, gamma);
+        // Vector W_ave = Operator::_convolve(W, W_bar);
         
-        // COMPUTE MAX WAVE SPEED
-        // Box rangeBox = a_U.box().grow(-ghost());
-        // Scalar uabs = forall<double>(f_waveSpeedBound, rangeBox, W, gamma);
-        // umax = uabs.absMax();
+        // // COMPUTE MAX WAVE SPEED
+        // // Box rangeBox = a_U.box().grow(-ghost());
+        // // Scalar uabs = forall<double>(f_waveSpeedBound, rangeBox, W, gamma);
+        // // umax = uabs.absMax();
 
-        // COMPUTE DIV FLUXES
-        for (int dir = 0; dir < DIM; dir++)
-        {
-            computeFlux(a_fluxes[dir], W_ave, dir);
-            a_Rhs += m_divergence[dir](a_fluxes[dir]);
-        }
-        a_Rhs *= (a_scale / dx); //Assuming isotropic grid spacing
-        auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-        std::cout << "The time is " << duration.count() << std::endl;
-  
+        // // COMPUTE DIV FLUXES
+        // for (int dir = 0; dir < DIM; dir++)
+        // {
+        //     computeFlux(a_fluxes[dir], W_ave, dir);
+        //     a_Rhs += m_divergence[dir](a_fluxes[dir]);
+        // }
+        // a_Rhs *= (a_scale / dx); //Assuming isotropic grid spacing
     }
 #ifdef PR_AMR
   static inline void generateTags(

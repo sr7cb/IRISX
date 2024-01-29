@@ -1,9 +1,22 @@
 #include <iostream>
 #include "Proto.H"
+#include "chrono"
 // #include "examples/_common/InputParser.H"
 #include "examples/_common/LevelRK4.H"
+#if defined IRIS
+#include <iris/iris.hpp>
+#include <iris/iris_openmp.h>
+#include <vector>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+#include <include/interface.hpp>
+#include <include/protoeulerlib.hpp>
+#pragma GCC diagnostic pop
+ProtoProblem pp("leveleuler");
+#include "include/BoxOp_Euler_iris.hpp"
+#else
 #include "include/BoxOp_Euler.hpp"
-
+#endif
 using namespace Proto;
 
 
@@ -35,11 +48,29 @@ PROTO_KERNEL_END(f_initialize_, f_initialize)
 int main(int argc, char** argv)
 {
 
+#if defined IRIS
   iris_init(&argc, &argv, 1);
-
+  int n,m,k;
+    n = 136; //40
+    m = 136; //40
+    k = 4;
+    std::vector<int> sizes{(n-8)*(m-8)*k, n*m*k, 1, 1, 1, n, m};
+    double * a = new double[n*m*k];
+    double * b = new double[n*m*k];
+    double c = 1;
+    double d = 1;
+    double e = 1;
+    std::vector<void*> args{a, b, &c, &d, &e};
+    pp.setArgs(args);
+    pp.setSizes(sizes);
+    pp.createGraph();
+#endif
+    double start, end;
 
 #ifdef PR_MPI
     MPI_Init(&argc, &argv);
+    MPI_Barrier(MPI_COMM_WORLD);
+    start = MPI_Wtime();
 #endif
 
     // DEFAULT PARAMETERS
@@ -119,7 +150,12 @@ int main(int argc, char** argv)
         std::cout << k << " " << maxStep << " " << time << " " << maxTime << std::endl;
     }
 #ifdef PR_MPI
+    MPI_Barrier(MPI_COMM_WORLD); /* IMPORTANT */
+    end = MPI_Wtime();
     MPI_Finalize();
 #endif
+    std::cout << "the time is " << end - start << std::endl;
+#if defined IRIS
   iris_finalize();
+#endif
 }
