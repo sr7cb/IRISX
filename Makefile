@@ -1,5 +1,5 @@
 IRIS_PATH=${IRIS}
-PROTO_PATH=/home/sanilr/proto
+PROTO_PATH=/ccs/home/sanilrao/proto
 CONSTANTS= -DDIM=2 -DHDF5=off -DPR_MPI=on
 LDFLAGS=-L$(IRIS)/lib64 -L$(IRIS)/lib -liris -lpthread -ldl
 MPI_COMPILE_FLAGS = $(shell mpicc --showme:compile)
@@ -7,7 +7,11 @@ MPI_LINK_FLAGS = $(shell mpicc --showme:link)
 CFLAGS=-pg
 
 proto_no_mpi:
-	g++ --std=c++17 -ggdb -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH) -O3 -DDIM=2 -DHDF5=off -DPRINTDEBUG  -o spiral_proto_no_mpi spiral_proto_leveleuler_mpi.cpp $(LDFLAGS) 
+	hipcc --std=c++17 -ggdb -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH) -I/opt/rocm-5.7.1/include/roctracer -L/opt/rocm-5.7.1/lib -O3 -DDIM=2 -DPROTO_ACCEL -DPROTO_HIP -DHDF5=off -DTIME -o spiral_proto_no_mpi spiral_proto_leveleuler_mpi.cpp $(LDFLAGS) 
+
+
+proto_no_mpi_iris:
+	g++ --std=c++17 -ggdb -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH) -O3 -DDIM=2 -DHDF5=off -DTIME -DIRIS -o spiral_proto_no_mpi_iris spiral_proto_leveleuler_mpi.cpp $(LDFLAGS) 
 
 
 proto_mpi:

@@ -1,6 +1,6 @@
 #include <iostream>
 #include "Proto.H"
-#include "chrono"
+#include <chrono>
 // #include "examples/_common/InputParser.H"
 #include "examples/_common/LevelRK4.H"
 #if defined IRIS
@@ -65,9 +65,14 @@ int main(int argc, char** argv)
     pp.setSizes(sizes);
     pp.createGraph();
 #endif
-    double start, end;
+
+#if defined TIME
+    std::cout << "Hello from time\n";
+    auto start = std::chrono::high_resolution_clock::now();
+#endif
 
 #ifdef PR_MPI
+    double start, end;
     MPI_Init(&argc, &argv);
     MPI_Barrier(MPI_COMM_WORLD);
     start = MPI_Wtime();
@@ -153,8 +158,15 @@ int main(int argc, char** argv)
     MPI_Barrier(MPI_COMM_WORLD); /* IMPORTANT */
     end = MPI_Wtime();
     MPI_Finalize();
-#endif
     std::cout << "the time is " << end - start << std::endl;
+#endif
+
+#if defined TIME
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    std::cout << "The total time is " << duration.count() << std::endl;
+#endif
+    
 #if defined IRIS
   iris_finalize();
 #endif

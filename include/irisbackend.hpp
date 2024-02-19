@@ -620,14 +620,14 @@ void Executor::execute2(std::string input, std::string arch) {
       if(DEBUGOUT)
         std::cout << "in cuda code portion\n";
         std::string command;
-        command.append("nvcc -Xcudafe --diag_suppress=declared_but_not_referenced -ptx" + getIRISX() + "/kernel.cu");
+        command.append("nvcc -Xcudafe --diag_suppress=declared_but_not_referenced -ptx " + getIRISX() + "/kernel.cu");
         system(command.c_str());
     }
     else if(arch == "hip") {
       if(DEBUGOUT)
         std::cout << "in hip code portion\n";
         std::string command;
-        command.append("hipcc --genco -o kernel.hip" + getIRISX() + "/kernel.hip.cpp");
+        command.append("hipcc --genco -o kernel.hip " + getIRISX() + "/kernel.hip.cpp");
         system(command.c_str());
     }
     else {

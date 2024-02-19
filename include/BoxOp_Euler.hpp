@@ -267,7 +267,7 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
         // for(int i = 0; i < 10; i++)
         //   std::cout << a_Rhs.data()[i] << std::endl;
 
-        
+        PR_STACK_ON;
         Vector W_bar = forall<double, NUMCOMPS>(f_consToPrim, a_U, gamma);
         Vector U = Operator::deconvolve(a_U);
         Vector W = forall<double, NUMCOMPS>(f_consToPrim, U, gamma);
@@ -285,6 +285,7 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
             a_Rhs += m_divergence[dir](a_fluxes[dir]);
         }
         a_Rhs *= (a_scale / dx); //Assuming isotropic grid spacing
+        PR_STACK_OFF;
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
         std::cout << "The time is " << duration.count() << std::endl;
