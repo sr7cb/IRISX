@@ -277,22 +277,23 @@ upwind_y := SIMTISum(ASIMTKernelFlag(ASIMTGridDimX(QuoInt(i6.range,256)+1)), b, 
 
 flux_lbd1 := Lambda(j, Lambda([x1], (1/2)* x1 *x1));
 flux_lbd2 := Lambda(j, Lambda([x1], gamma/(gamma - 1)*x1));
-a0_x := Diamond(mul) * VStack(Gath(fAdd(4*Product(dims_Xdir), 1, add(mul(b,256),i7))), Gath(fAdd(4*Product(dims_Xdir), 1, add(add(mul(b,256),i7),Product(dims_Xdir)))));
-a1_x := RowVec(1,1)* VStack(Diamond(mul) * VStack(a0_x,Gath(fAdd(4*Product(dims_Xdir),1,add(add(mul(b,256),i7),Product(dims_Xdir))))), Gath(fAdd(4*Product(dims_Xdir),1, add(add(mul(b,256),i7),3*Product(dims_Xdir)))));
-a2_x :=Diamond(mul) * VStack(a0_x,Gath(fAdd(4*Product(dims_Xdir), 1, add(add(mul(b,256),i7),2*Product(dims_Xdir)))));
+flux_lbd3 := Lambda(j, Lambda([x1], neg(x1)));
+a0_x :=  Diamond(mul) * VStack(Gath(fAdd(4*Product(dims_Xdir), 1, add(mul(b,256),i7))), Gath(fAdd(4*Product(dims_Xdir), 1, add(add(mul(b,256),i7),Product(dims_Xdir)))));
+a1_x :=  RowVec(1,1)* VStack(Diamond(mul) * VStack(a0_x,Gath(fAdd(4*Product(dims_Xdir),1,add(add(mul(b,256),i7),Product(dims_Xdir))))), Gath(fAdd(4*Product(dims_Xdir),1, add(add(mul(b,256),i7),3*Product(dims_Xdir)))));
+a2_x :=  Diamond(mul) * VStack(a0_x,Gath(fAdd(4*Product(dims_Xdir), 1, add(add(mul(b,256),i7),2*Product(dims_Xdir)))));
 temp_x := Pointwise(flux_lbd2)*Diamond(mul)* VStack(Gath(fAdd(4*Product(dims_Xdir), 1, add(add(mul(b,256),i7),Product(dims_Xdir)))), Gath(fAdd(4*Product(dims_Xdir),1,add(add(mul(b,256),i7),3*Product(dims_Xdir)))));
-a3_x := RowVec(1,1) * VStack(temp_x, Diamond(mul) * VStack(a0_x, RowVec(1,1)*VStack(Pointwise(flux_lbd1)*Gath(fAdd(4*Product(dims_Xdir), 1, add(add(mul(b,256),i7),Product(dims_Xdir)))),Pointwise(flux_lbd1)*Gath(fAdd(4*Product(dims_Xdir), 1,add(add(mul(b,256),i7),2*Product(dims_Xdir))))))); 
+a3_x :=  RowVec(1,1) * VStack(temp_x, Diamond(mul) * VStack(a0_x, RowVec(1,1)*VStack(Pointwise(flux_lbd1)*Gath(fAdd(4*Product(dims_Xdir), 1, add(add(mul(b,256),i7),Product(dims_Xdir)))),Pointwise(flux_lbd1)*Gath(fAdd(4*Product(dims_Xdir), 1,add(add(mul(b,256),i7),2*Product(dims_Xdir))))))); 
 flux_s_x := Scat(fStack(fAdd(4*Product(dims_Xdir), 1, add(mul(b,256),i7)), fAdd(4*Product(dims_Xdir), 1, add(add(mul(b,256),i7),Product(dims_Xdir))), fAdd(4*Product(dims_Xdir), 1, add(add(mul(b,256),i7),2*Product(dims_Xdir))), fAdd(4*Product(dims_Xdir), 1, add(add(mul(b,256),i7),3*Product(dims_Xdir)))));
-flux_vs1_x := VStack(a0_x, a1_x, a2_x, a3_x);
+flux_vs1_x := VStack(Pointwise(flux_lbd3) * a0_x, Pointwise(flux_lbd3) * a1_x, Pointwise(flux_lbd3) * a2_x, Pointwise(flux_lbd3) * a3_x);
 getFlux_x := SIMTISum(ASIMTKernelFlag(ASIMTGridDimX(QuoInt(i7.range,256)+1)), b, QuoInt(i7.range,256)+1, SIMTISum(ASIMTBlockDimX(256), i7, 256, COND(lt(add(mul(b,256),i7), Product(dims_Xdir)),BB(flux_s_x * flux_vs1_x), O(4*Product(dims_Xdir),4*Product(dims_Xdir)))));
 
-a0 := Diamond(mul) * VStack(Gath(fAdd(4*Product(dims_Ydir), 1, add(mul(b,256),i7))), Gath(fAdd(4*Product(dims_Ydir), 1, add(add(mul(b,256),i7),2 *Product(dims_Ydir)))));
-a1 :=Diamond(mul) * VStack(a0,Gath(fAdd(4*Product(dims_Ydir), 1, add(add(mul(b,256),i7),Product(dims_Ydir)))));
+a0 :=  Diamond(mul) * VStack(Gath(fAdd(4*Product(dims_Ydir), 1, add(mul(b,256),i7))), Gath(fAdd(4*Product(dims_Ydir), 1, add(add(mul(b,256),i7),2 *Product(dims_Ydir)))));
+a1 := Diamond(mul) * VStack(a0,Gath(fAdd(4*Product(dims_Ydir), 1, add(add(mul(b,256),i7),Product(dims_Ydir)))));
 a2 := RowVec(1,1)* VStack(Diamond(mul) * VStack(a0,Gath(fAdd(4*Product(dims_Ydir),1,add(add(mul(b,256),i7),2 *Product(dims_Ydir))))), Gath(fAdd(4*Product(dims_Ydir),1, add(add(mul(b,256),i7),3*Product(dims_Ydir)))));
 temp := Pointwise(flux_lbd2)*Diamond(mul)* VStack(Gath(fAdd(4*Product(dims_Ydir), 1, add(add(mul(b,256),i7),2 *Product(dims_Ydir)))), Gath(fAdd(4*Product(dims_Ydir),1, add(add(mul(b,256),i7),3*Product(dims_Ydir)))));
 a3 := RowVec(1,1) * VStack(temp, Diamond(mul) * VStack(a0, RowVec(1,1)*VStack(Pointwise(flux_lbd1)*Gath(fAdd(4*Product(dims_Ydir), 1, add(add(mul(b,256),i7),Product(dims_Ydir)))),Pointwise(flux_lbd1)*Gath(fAdd(4*Product(dims_Ydir), 1, add(add(mul(b,256),i7),2*Product(dims_Ydir))))))); 
 flux_s_y := Scat(fStack(fAdd(4*Product(dims_Ydir), 1, add(mul(b,256),i7)), fAdd(4*Product(dims_Ydir), 1, add(add(mul(b,256),i7),Product(dims_Ydir))), fAdd(4*Product(dims_Ydir), 1, add(add(mul(b,256),i7),2*Product(dims_Ydir))), fAdd(4*Product(dims_Ydir), 1, add(add(mul(b,256),i7),3*Product(dims_Ydir)))));
-flux_vs1_y := VStack(a0, a1, a2, a3);
+flux_vs1_y := VStack(Pointwise(flux_lbd3) * a0, Pointwise(flux_lbd3) * a1, Pointwise(flux_lbd3) * a2, Pointwise(flux_lbd3) * a3);
 getFlux_y := SIMTISum(ASIMTKernelFlag(ASIMTGridDimX(QuoInt(i7.range,256)+1)), b, QuoInt(i7.range,256)+1, SIMTISum(ASIMTBlockDimX(256), i7, 256, COND(lt(add(mul(b,256),i7), Product(dims_Xdir)), BB(flux_s_y * flux_vs1_y), O(4*Product(dims_Ydir),4*Product(dims_Ydir)))));
 
 
@@ -310,20 +311,20 @@ _deconface_Y := BB(IterVStack(j2, j2.range, rv_deconface_y * VStack(Blk([deconfa
 
 a0_x_decon := Diamond(mul) * VStack(Gath(fAdd(4, 1, 0)), Gath(fAdd(4, 1, 1)));
 a1_x_decon := RowVec(1,1)* VStack(Diamond(mul) * VStack(a0_x_decon,Gath(fAdd(4,1,1))), Gath(fAdd(4,1, 3)));
-a2_x_decon :=Diamond(mul) * VStack(a0_x_decon,Gath(fAdd(4, 1, 2)));
+a2_x_decon := Diamond(mul) * VStack(a0_x_decon,Gath(fAdd(4, 1, 2)));
 temp_x_decon := Pointwise(flux_lbd2)*Diamond(mul)* VStack(Gath(fAdd(4, 1, 1)), Gath(fAdd(4,1,3)));
 a3_x_decon := RowVec(1,1) * VStack(temp_x_decon, Diamond(mul) * VStack(a0_x_decon, RowVec(1,1)*VStack(Pointwise(flux_lbd1)*Gath(fAdd(4, 1, 1)),Pointwise(flux_lbd1)*Gath(fAdd(4, 1,2))))); 
 flux_s_x_decon := Scat(fStack(fAdd(4*Product(flux_Xdims), 1, add(mul(b,256),i8)), fAdd(4*Product(flux_Xdims), 1, add(add(mul(b,256),i8),Product(flux_Xdims))), fAdd(4*Product(flux_Xdims), 1, add(add(mul(b,256),i8),2*Product(flux_Xdims))), fAdd(4*Product(flux_Xdims), 1, add(add(mul(b,256),i8),3*Product(flux_Xdims)))));
-flux_vs1_x_decon := VStack(a0_x_decon, a1_x_decon, a2_x_decon, a3_x_decon);
+flux_vs1_x_decon := VStack(Pointwise(flux_lbd3) * a0_x_decon, Pointwise(flux_lbd3) * a1_x_decon,Pointwise(flux_lbd3) * a2_x_decon,Pointwise(flux_lbd3) * a3_x_decon);
 getFlux_x_decon := SIMTISum(ASIMTKernelFlag(ASIMTGridDimX(QuoInt(i8.range,256)+1)), b, QuoInt(i8.range,256)+1, SIMTISum(ASIMTBlockDimX(256), i8, 256, COND(lt(add(mul(b,256),i8), i8.range),BB(flux_s_x_decon * flux_vs1_x_decon * _deconface_X), O(4*Product(flux_Xdims),4*Product(dims_Xdir)))));
 
-a0_decon := Diamond(mul) * VStack(Gath(fAdd(4, 1, 0)), Gath(fAdd(4, 1, 2)));
-a1_decon :=Diamond(mul) * VStack(a0_decon,Gath(fAdd(4, 1, 1)));
-a2_decon := RowVec(1,1)* VStack(Diamond(mul) * VStack(a0_decon,Gath(fAdd(4,1,2))), Gath(fAdd(4,1, 3)));
+a0_decon := Pointwise(flux_lbd3) * Diamond(mul) * VStack(Gath(fAdd(4, 1, 0)), Gath(fAdd(4, 1, 2)));
+a1_decon := Pointwise(flux_lbd3) *Diamond(mul) * VStack(a0_decon,Gath(fAdd(4, 1, 1)));
+a2_decon := Pointwise(flux_lbd3) * RowVec(1,1)* VStack(Diamond(mul) * VStack(a0_decon,Gath(fAdd(4,1,2))), Gath(fAdd(4,1, 3)));
 temp_decon := Pointwise(flux_lbd2)*Diamond(mul)* VStack(Gath(fAdd(4, 1, 2)), Gath(fAdd(4,1, 3)));
-a3_decon := RowVec(1,1) * VStack(temp_decon, Diamond(mul) * VStack(a0_decon, RowVec(1,1)*VStack(Pointwise(flux_lbd1)*Gath(fAdd(4, 1, 1)),Pointwise(flux_lbd1)*Gath(fAdd(4, 1,2))))); 
+a3_decon := Pointwise(flux_lbd3) * RowVec(1,1) * VStack(temp_decon, Diamond(mul) * VStack(a0_decon, RowVec(1,1)*VStack(Pointwise(flux_lbd1)*Gath(fAdd(4, 1, 1)),Pointwise(flux_lbd1)*Gath(fAdd(4, 1,2))))); 
 flux_s_y_decon := Scat(fStack(fAdd(4*Product(flux_Ydims), 1, add(mul(b,256),i8)), fAdd(4*Product(flux_Ydims), 1, add(add(mul(b,256),i8),Product(flux_Ydims))), fAdd(4*Product(flux_Ydims), 1, add(add(mul(b,256),i8),2*Product(flux_Ydims))), fAdd(4*Product(flux_Ydims), 1, add(add(mul(b,256),i8),3*Product(flux_Ydims)))));
-flux_vs1_y_decon := VStack(a0_decon, a1_decon, a2_decon, a3_decon);
+flux_vs1_y_decon := VStack(Pointwise(flux_lbd3) *a0_decon, Pointwise(flux_lbd3) *a1_decon, Pointwise(flux_lbd3) *a2_decon, Pointwise(flux_lbd3) *a3_decon);
 getFlux_y_decon := SIMTISum(ASIMTKernelFlag(ASIMTGridDimX(QuoInt(i8.range,256)+1)), b, QuoInt(i8.range,256)+1, SIMTISum(ASIMTBlockDimX(256), i8, 256, COND(lt(add(mul(b,256),i8), i8.range),BB(flux_s_y_decon * flux_vs1_y_decon * _deconface_Y),  O(4*Product(flux_Xdims),4*Product(dims_Xdir)))));
 
 
@@ -369,7 +370,7 @@ gath_crop_y := Gath(fAdd(4 * Product(divergence_Ydims),1, add(add(add(gshift_y, 
 crop_y := SIMTISum(ASIMTKernelFlag(ASIMTGridDimX(QuoInt(i11.range,256)+1)), b, QuoInt(i11.range,256)+1, SIMTISum(ASIMTBlockDimX(256), i11, 256, COND(lt(add(mul(b,256),i11), i11.range), Scat(fStack(fAdd(4 * Product(final_dims),1, add(mul(b,256),i11)), fAdd(4 * Product(final_dims),1, add(add(mul(b,256),i11), Product(final_dims))), fAdd(4 * Product(final_dims),1, add(add(mul(b,256),i11), 2 * Product(final_dims))), fAdd(4 * Product(final_dims),1, add(add(mul(b,256),i11), 3 * Product(final_dims))))) * IterVStack(j2, j2.range, gath_crop_y).unroll(), O(4 * Product(final_dims),4 * Product(divergence_Ydims)))));
 
 plus_equal := Gath(fStack(fAdd(8*Product(final_dims), 1, add(add(mul(b,256),i11), mul(j2, Product(final_dims)))), fAdd(8*Product(final_dims), 1, add(add(mul(b,256),i11), mul(j2 + 4, Product(final_dims))))));
-times_equal := Lambda(j, Lambda(x1, ((-1*a_scale)/dx) * x1));
+times_equal := Lambda(j, Lambda(x1, ((a_scale)/dx) * x1));
 final_scat := Scat(fStack(fAdd(4*Product(final_dims), 1, add(mul(b,256),i11)),fAdd(4*Product(final_dims), 1, add(add(mul(b,256),i11),Product(final_dims))),fAdd(4*Product(final_dims), 1, add(add(mul(b,256),i11),2 * Product(final_dims))),fAdd(4*Product(final_dims), 1, add(add(mul(b,256),i11),3 *Product(final_dims)))));
 final_arith := SIMTISum(ASIMTKernelFlag(ASIMTGridDimX(QuoInt(i11.range,256)+1)), b, QuoInt(i11.range,256)+1, SIMTISum(ASIMTBlockDimX(256), i11, 256, COND(lt(add(mul(b,256),i11), i11.range), final_scat * IterVStack(j2, j2.range, Pointwise(times_equal) * RowVec(1,1) * plus_equal).unroll(), O(4*Product(final_dims),8*Product(final_dims)))));
 

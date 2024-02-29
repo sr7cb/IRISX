@@ -108,7 +108,7 @@ class Executor {
         std::vector<int> data_lengths;
         void * shared_lib;
         float CPUTime;
-        int graph_created;
+        int graph_created = 0;
         iris_graph graph;
         iris_mem io[2];
     public:
