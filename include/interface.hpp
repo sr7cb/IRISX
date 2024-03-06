@@ -218,6 +218,7 @@ public:
     void setArgs(const std::vector<void*>& args1);
     void setName(std::string name);
     void transform();
+    void readKernels();
     void createGraph();
     std::string semantics2(std::string arch);
     virtual void randomProblemInstance() = 0;
@@ -338,7 +339,16 @@ std::string FFTXProblem::semantics2(std::string arch) {
     // return "cuda";
 }
 
-void FFTXProblem::createGraph(){
+
+
+void FFTXProblem::createGraph() {
+    e.createGraph(args, sizes, name);
+    e.retainGraph();
+    gen_executor = true;
+}
+
+
+void FFTXProblem::readKernels(){
 
     if(gen_executor == true) { //check in memory cache
         if ( DEBUGOUT) std::cout << "cached size found, running cached instance\n";
@@ -383,9 +393,9 @@ void FFTXProblem::createGraph(){
         }
         
         e.execute();
-        e.createGraph(args, sizes, name);
-        e.retainGraph();
-        gen_executor = true;
+        // e.createGraph(args, sizes, name);
+        // e.retainGraph();
+        // gen_executor = true;
     }
 }
 

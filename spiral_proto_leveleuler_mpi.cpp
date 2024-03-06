@@ -1,4 +1,8 @@
 #include <iostream>
+#if defined PROTO_CUDA
+#include "cuda.h"
+#include "cuda_runtime.h"
+#endif
 #include "Proto.H"
 #include <chrono>
 // #include "examples/_common/InputParser.H"
@@ -48,26 +52,36 @@ PROTO_KERNEL_END(f_initialize_, f_initialize)
 int main(int argc, char** argv)
 {
 
+
+
 #if defined IRIS
   iris_init(&argc, &argv, 1);
   int n,m,k;
-    n = 136; //40
-    m = 136; //40
+    n = 32+8; //40
+    m = 32+8; //40
     k = 4;
     std::vector<int> sizes{(n-8)*(m-8)*k, n*m*k, 1, 1, 1, n, m};
     double * a = new double[n*m*k];
     double * b = new double[n*m*k];
-    double c = 1;
-    double d = 1;
-    double e = 1;
+    double c = 1.4;
+    double d =  0.00390625;
+    double e = 1.0 / 64;
+    // double c = 1;
+    // double d = 1;
+    // double e = 1;
     std::vector<void*> args{a, b, &c, &d, &e};
     pp.setArgs(args);
     pp.setSizes(sizes);
+    pp.readKernels();
+    #if defined TIME 
+        std::cout << "Hello from inner time\n";
+        auto start = std::chrono::high_resolution_clock::now();
+    #endif
     pp.createGraph();
 #endif
 
-#if defined TIME
-    std::cout << "Hello from time\n";
+#if defined TIME && !defined IRIS
+    std::cout << "Hello from outer time\n";
     auto start = std::chrono::high_resolution_clock::now();
 #endif
 
@@ -79,8 +93,8 @@ int main(int argc, char** argv)
 #endif
 
     // DEFAULT PARAMETERS
-    int domainSize = 256; //64
-    int boxSize = 128; //32
+    int domainSize = 64; //64
+    int boxSize = 32; //32
     // double maxTime = 1.0;
     // int maxStep = 10;
     double maxTime = 0.25 / domainSize;
@@ -121,7 +135,7 @@ int main(int argc, char** argv)
 
     // INITIALIZE DATA
     LevelBoxData<double, OP::numState()> U(layout, OP::ghost());
-    //U.initConvolve(f_initialize, dx, gamma);
+    // U.initConvolve(f_initialize, dx, gamma);
     Operator::initConvolve(U, f_initialize, dx, gamma);
 
     // DO INTEGRATION

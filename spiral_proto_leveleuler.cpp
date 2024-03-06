@@ -51,8 +51,8 @@ int main(int argc, char** argv) {
   // auto start = std::chrono::high_resolution_clock::now();
   std::string mystring;
   int n,m,k;
-  n = 136;
-  m = 136;
+  n = 32+8;
+  m = 32+8;
   k = 4;
 
   std::vector<int> sizes{n*m*k, n*m*k, 1, 1, 1, n, m};
@@ -85,9 +85,9 @@ int main(int argc, char** argv) {
     std::vector<void*> args{Y,X, &gamma, &a_scale, &dx};
     ProtoProblem pp(args,sizes,"level_euler");
   for(int i = 0; i < 1; i++) {
-  std::cout << pp.gpuTime << std::endl;
+  // std::cout << pp.gpuTime << std::endl;
   pp.transform();
-  std::cout << pp.gpuTime << std::endl;
+  // std::cout << pp.gpuTime << std::endl;
   std::cout << "kernel execution time is " << pp.getTime() << std::endl;
   }
   double * correct_ans = new double[(n-8)*(m-8)*k];
