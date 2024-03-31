@@ -154,6 +154,9 @@ void getImportAndConfIRIS(std::string arch) {
         std::cout << "conf := LocalConfig.fftx.confGPU();" << std::endl;
     else if(arch == "hip" || arch == "hipopenmp")
         std::cout << "conf := FFTXGlobals.defaultHIPConf();" << std::endl;
+    else if(arch == "opencl") {
+        std::cout << "conf := FFTXGlobals.defaultOpenCLConf();" << std::endl;
+    }
     else if(arch == "openmp")
         std::cout << "conf := FFTXGlobals.defaultConf();" << std::endl;
     else
@@ -168,6 +171,8 @@ void printIRISBackend(std::string name, std::vector<int> sizes, std::string arch
         std::cout << "PrintIRISMETAJIT(c,opts);" << std::endl;
         // std::cout << "opts.prettyPrint(c);" << std::endl;
     } else if(arch == "hip") {
+        std::cout << "PrintIRISMETAJIT(c,opts);\n" << std::endl;
+    } else if(arch == "opencl") {
         std::cout << "PrintIRISMETAJIT(c,opts);\n" << std::endl;
     } else if(arch == "openmp") {
         std::cout << "opts.prettyPrint(c);" << std::endl;
@@ -285,7 +290,17 @@ std::string FFTXProblem::semantics2(std::string arch) {
         metakernel.open("kerneljit.hip.cpp");
         metakernel << result;
         metakernel.close();
-    } else if(arch == "openmp") {
+    } else if(arch == "opencl") {
+        result = result.substr(result.find("spiral> JIT BEGIN"));
+        std::ofstream kernel, metakernel;
+        kernel.open("kernel.cl");
+        kernel << result.substr(result.find(f)+18);
+        kernel.close();
+        metakernel.open("kerneljit.cl");
+        metakernel << result;
+        metakernel.close();
+    } 
+    else if(arch == "openmp") {
         result = result.substr(result.find("#include"));
         std::ofstream kernel, metakernel;
         kernel.open("kernel_openmp.c");
@@ -374,6 +389,8 @@ void FFTXProblem::readKernels(){
                 oss << "kerneljit.hip.cpp";
             else if(word == "hip" && flag == "openmp")
                 oss << "kernel_host2hip.c";
+            else if(word == "opencl" && flag == "")
+                oss << "kerneljit.cl";
             else if(word == "openmp") 
                 oss << "kernel_openmp.c";
             else
@@ -452,6 +469,8 @@ void FFTXProblem::transform(){
                     oss << "kerneljit.hip.cpp";
                 else if(word == "hip" && flag == "openmp")
                     oss << "kernel_host2hip.c";
+                else if(word == "opencl" && flag == "")
+                    oss << "kerneljit.cl";
                 else if(word == "openmp") 
                     oss << "kernel_openmp.c";
                 else

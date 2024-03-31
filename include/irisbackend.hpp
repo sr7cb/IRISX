@@ -488,7 +488,7 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
         iris_task_create(&task[i]);
         std::vector<void*> local_params;
         std::vector<int> local_params_info; 
-        if((getIRISARCH().find("cuda") != std::string::npos || getIRISARCH().find("hip") != std::string::npos) && !findOpenMP()) {
+        if((getIRISARCH().find("cuda") != std::string::npos || getIRISARCH().find("hip") != std::string::npos || getIRISARCH().find("opencl") != std::string::npos) && !findOpenMP()) {
             if(DEBUGOUT) {
                 std::cout << "grid: " << kernel_params[i*6] <<  ", " << kernel_params[i*6+1] << ", " << kernel_params[i*6+2] << std::endl;
                 std::cout << "block: " << kernel_params[i*6+3] <<  ", " << kernel_params[i*6+4] <<  ", " << kernel_params[i*6+5] << std::endl;
@@ -583,6 +583,8 @@ void Executor::execute() {
             oss << "kerneljit.hip.cpp";
         else if(word == "hip" && flag == "openmp")
             oss << "kernel_host2hip.c";
+        else if(word == "opencl" && flag == "")
+                oss << "kerneljit.cl";
         else if(word == "openmp") 
             oss << "kernel_openmp.c";
         else
@@ -606,7 +608,7 @@ void Executor::execute() {
 void Executor::execute2(std::string input, std::string arch) {
   if(DEBUGOUT)
     std::cout << "arch in execute2 " << arch << std::endl;
-    if((arch == "cuda" || arch == "hip") && parsed == 0 && !findOpenMP()) {
+    if((arch == "cuda" || arch == "hip" || arch == "opencl") && parsed == 0 && !findOpenMP()) {
         parsed = parseDataStructure ( input );
         if(DEBUGOUT)
         std::cout << "parsed " << parsed << std::endl;
@@ -629,6 +631,12 @@ void Executor::execute2(std::string input, std::string arch) {
         std::string command;
         command.append("hipcc --genco -o kernel.hip " + getIRISX() + "/kernel.hip.cpp");
         system(command.c_str());
+    }
+    else if(arch == "opencl") {
+        if(DEBUGOUT)
+          std::cout << "in opencl code portion\n";
+          std::string command;
+          command.append("clang -cc1 -finclude-default-header -triple spir " + getIRISX() + "kernel.cl -O0 -flto -emit-llvm-bc -o kernel.bc");
     }
     else {
         std::string command;
@@ -681,9 +689,15 @@ void Executor::multiDeviceScheduling(){
     iris_graph_get_tasks(graph, tasks);
     for(int i=0; i<ntasks; i++) {
         iris_task task = tasks[i];
+        // printf("task %s and task id %d\n", iris_task_get_name(task), i );
         //int id = dev_map[r%nrows][c%ncols];
+        if(i >=8 && i <= 12)
+          id = 1;
+        // else if(i >= 13 && i <= 17)
+        //   id = 2;
+        else
+          id = 0;
         iris_task_set_policy(task, id);
     }
 }
-
 #endif            //  FFTX_MDDFT_HIPBACKEND_HEADER
