@@ -51,6 +51,8 @@ int main(int argc, char** argv) {
 
   ConvProblem cp(args,sizes,"conv");
   
+  cp.readKernels(); 
+  cp.createGraph();
   cp.transform();
 
 //   std::cout << "kernel execution time is " << cp.getTime() << std::endl;

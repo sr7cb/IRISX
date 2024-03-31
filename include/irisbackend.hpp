@@ -636,7 +636,7 @@ void Executor::execute2(std::string input, std::string arch) {
         if(DEBUGOUT)
           std::cout << "in opencl code portion\n";
           std::string command;
-          command.append("clang -cc1 -finclude-default-header -triple spir " + getIRISX() + "kernel.cl -O0 -flto -emit-llvm-bc -o kernel.bc");
+          command.append("icpx -cc1 -finclude-default-header -triple spir " + getIRISX() + "kernel.cl -O0 -flto -emit-llvm-bc -o kernel.bc");
     }
     else {
         std::string command;
