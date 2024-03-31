@@ -6,6 +6,9 @@ MPI_COMPILE_FLAGS = $(shell mpicc --showme:compile)
 MPI_LINK_FLAGS = $(shell mpicc --showme:link)
 CFLAGS=-pg
 
+conv:
+	g++ $(INTELFLAGS) -I$(IRIS_PATH)/include -I. -Wunused-result -O3 -DPRINTDEBUG -o irisx_convolution spiral_iris_convolution.cpp $(LDFLAGS)
+
 proto_no_mpi:
 	hipcc --std=c++17 -ggdb -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH) -I/opt/rocm-5.7.1/include/roctracer -L/opt/rocm-5.7.1/lib -O3 -DDIM=2 -DPROTO_ACCEL -DPROTO_HIP -DHDF5=off -DTIME -o spiral_proto_no_mpi spiral_proto_leveleuler_mpi.cpp $(LDFLAGS) 
 
