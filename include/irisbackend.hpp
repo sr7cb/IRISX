@@ -121,6 +121,7 @@ class Executor {
         void multiDeviceScheduling();
         void createGraph(std::vector<void*>& args, std::vector<int> sizes, std::string name);
         void retainGraph();
+        void appendGraph(std::vector<void*>& args, std::vector<int> sizes, std::string name);
         int getGraphCreated();
         std::string getKernels();
 };
@@ -512,13 +513,13 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
             iris_task_kernel(task[i], kernel_names.at(i).c_str(), 1, NULL, &value, NULL, 3+pointers, params.data(), params_info.data());
         }
 
-	    if(i == kernel_names.size() -1)   
-            // iris_task_dmem_flush_out(task[i], *(iris_mem*)local_params.at(0));
-          iris_task_d2h_full(task[i], *(iris_mem*)local_params.at(0), args.at(0));  
+	    // if(i == kernel_names.size() -1)   
+        //     // iris_task_dmem_flush_out(task[i], *(iris_mem*)local_params.at(0));
+        //   iris_task_d2h_full(task[i], *(iris_mem*)local_params.at(0), args.at(0));  
 
         iris_graph_task(graph, task[i], iris_gpu, NULL);
     }
-    multiDeviceScheduling();
+    // multiDeviceScheduling();
     // auto start = std::chrono::high_resolution_clock::now();
     // iris_graph_submit(graph, iris_default, 1);
     // auto stop = std::chrono::high_resolution_clock::now();
@@ -528,6 +529,254 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
     // platform.finalize();
     // return getKernelTime();
 }
+
+
+void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std::string name) {
+    // iris::Platform platform;
+    // platform.init(NULL, NULL, true);
+    // size_t size = sizes.at(0) * sizes.at(1) * sizes.at(2);
+    if ( DEBUGOUT) {
+        std::cout << "In create and run graph" << std::endl;
+        for(int i = 0; i < sizes.size(); i++) {
+            std::cout << "size " << i << ": " << sizes.at(i) << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "start\n";
+        std::cout << device_names.size() << std::endl;
+        std::cout << kernel_names.size() << std::endl;
+        std::cout << "end\n";
+        for(int i = 0; i < device_names.size(); i++) {
+                std::cout << std::get<0>(device_names[i]) << std::endl;
+            }
+        for(int i = 0; i < kernel_names.size(); i++) {
+            std::cout << kernel_names[i] << std::endl;
+        }
+        std::cout << "data size " << data.size() << std::endl;
+        std::cout << "data_lengths size " << data_lengths.size() << std::endl;
+        // for(int i = 0; i < data.size(); i++) {
+        //     std::cout << "size of list " << data_lengths.at(i) << std::endl;
+        //     for(int j = 0; j < data_lengths.at(i); j++){
+        //        std::cout << ((double*)data.at(i))[j] << std::endl;
+        //     }
+        // }
+        // exit(0);
+    }
+
+    int number_params = 0;
+    if(args.size() != sig_types.size() && !findOpenMP()) {
+        std::cout << "this is the passed in sig size " <<  args.size() << " this is the size of kernel " << sig_types.size() << std::endl;
+        std::cout << "Error signatures do not match need to pass more parameters from driver" << std::endl;
+        exit(-1);
+    }
+
+    if((getIRISARCH().find("cuda") == std::string::npos && getIRISARCH().find("hip") == std::string::npos) && findOpenMP()) {
+        iris_mem * mem_X = new iris_mem;
+        iris_mem * mem_Y = new iris_mem;
+        iris_mem * mem_sym = new iris_mem;
+        iris_data_mem_create(mem_Y, args.at(0), sizes.at(0) * sizeof(double));
+        iris_register_pin_memory(args.at(0), sizes.at(0) * sizeof(double));
+        iris_data_mem_create(mem_X, args.at(1), sizes.at(1) * sizeof(double));
+        iris_register_pin_memory(args.at(1), sizes.at(1) * sizeof(double));
+        iris_data_mem_create(mem_sym, args.at(2), sizes.at(2) * sizeof(double));
+        iris_register_pin_memory(args.at(2), sizes.at(2) * sizeof(double));
+        params.push_back(mem_Y);
+        params.push_back(mem_X);
+        params.push_back(mem_sym);
+        params_info.push_back(iris_w);
+        params_info.push_back(iris_r);
+        params_info.push_back(iris_r);
+
+    } else {
+        for(int i = 0; i < sig_types.size(); i++) {
+          if(DEBUGOUT)
+            std::cout << std::get<0>(sig_types.at(i)) << ":" << std::get<1>(sig_types.at(i)) << std::endl;
+            std::string type = std::get<1>(sig_types.at(i));
+            switch(hashit(type)) {
+                case constant:
+                {
+                    break;
+                }
+                case pointer_int:
+                {
+                    iris_mem * mem_p = new iris_mem;
+                    iris_data_mem_create(mem_p, args.at(i), 
+                        sizes.at(i) * sizeof(int));
+                    iris_register_pin_memory(args.at(i), sizes.at(i) * sizeof(int));
+                    params.push_back(mem_p);
+                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
+                    number_params++;
+                    break;
+                }
+                case pointer_float:
+                {
+                    iris_mem * mem_p = new iris_mem;
+                    iris_data_mem_create(mem_p, args.at(i), 
+                        sizes.at(i) * sizeof(float));
+                    iris_register_pin_memory(args.at(i), sizes.at(i) * sizeof(float));
+                    params.push_back(mem_p);
+                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
+                    number_params++;
+                    break;
+                }
+                case pointer_double:
+                {
+                    if(i == 0 || i == 1) {
+                      iris_data_mem_create(&io[i], args.at(i), 
+                        sizes.at(i) * sizeof(double));
+                    params.push_back(&io[i]);
+                    }
+                    else{
+                    iris_mem * mem_p = new iris_mem;
+                    iris_data_mem_create(mem_p, args.at(i), 
+                        sizes.at(i) * sizeof(double));
+                    params.push_back(mem_p);
+                    }
+                    iris_register_pin_memory(args.at(i), sizes.at(i) * sizeof(double));
+                    // params.push_back(mem_p);
+                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
+                    number_params++;
+                    break;
+                }
+                case two:
+                {
+                    params.push_back(args.at(i));
+                    for(int j = 0; j < new_params_info.size(); j++) {
+                        for(int k = 0; k < new_params_info.at(j).size(); k++) {
+                            if(std::get<0>(new_params_info.at(j).at(k)) == std::get<0>(sig_types.at(i))) {
+                               std::get<1>(new_params_info.at(j).at(k)) = sizeof(double);
+                            }
+                        }
+                    }
+                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
+                    number_params++;
+                    break;
+                } 
+            }
+        }
+    }
+    int pointers = 0;
+    for(int i = 0; i < device_names.size(); i++) {
+        std::string test = std::get<2>(device_names[i]);
+        if(DEBUGOUT)
+        std::cout << std::get<0>(device_names[i]) << ":" << test << std::endl;
+        switch(hashit(test)) {
+            case constant:
+            {
+                iris_mem * mem_p = new iris_mem;
+    		    iris_data_mem_create(mem_p, data.at(i), data_lengths.at(i) * sizeof(double));
+                iris_register_pin_memory(data.at(i), data_lengths.at(i) * sizeof(double));
+                params.push_back(mem_p);
+                pointers++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
+                number_params++;
+                break;
+            }
+            case pointer_int:
+            {
+                iris_mem * mem_p = new iris_mem;
+                iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(int));
+                iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(int));
+                params.push_back(mem_p);
+                pointers++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
+                number_params++;
+                break;
+            }
+            case pointer_float:
+            {
+                iris_mem * mem_p = new iris_mem;
+                iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(float));
+                iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(float));
+                params.push_back(mem_p);
+                pointers++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
+                number_params++;
+                break;
+            }
+            case pointer_double:
+            {
+                iris_mem * mem_p = new iris_mem;
+    		    iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
+                iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
+                params.push_back(mem_p);
+                pointers++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
+                number_params++;
+                break;
+            }
+            case two:
+            {
+                iris_mem * mem_p = new iris_mem;
+    		    iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
+                //iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
+                params.push_back(mem_p);
+                pointers++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
+                number_params++;
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    
+    // for(int i = 0; i < new_params_info.size(); i++) {
+    //     for(int j = 0; j < new_params_info.at(i).size(); j++)
+    //         std::cout << std::get<0>(new_params_info.at(i).at(j)) << " " << std::get<1>(new_params_info.at(i).at(j)) << std::endl;
+    // }
+    // iris_graph graph;
+    // iris_graph_create(&graph);
+
+    iris_task task[kernel_names.size()];
+    for(int i = 0; i < kernel_names.size(); i++) {
+      if(DEBUGOUT) {
+        std::cout << "number of kernels is: " << kernel_names.size() << std::endl;
+        std::cout << "kernel name: " << kernel_names.at(i) << std::endl;
+      }
+        iris_task_create(&task[i]);
+        std::vector<void*> local_params;
+        std::vector<int> local_params_info; 
+        if((getIRISARCH().find("cuda") != std::string::npos || getIRISARCH().find("hip") != std::string::npos || getIRISARCH().find("opencl") != std::string::npos) && !findOpenMP()) {
+            if(DEBUGOUT) {
+                std::cout << "grid: " << kernel_params[i*6] <<  ", " << kernel_params[i*6+1] << ", " << kernel_params[i*6+2] << std::endl;
+                std::cout << "block: " << kernel_params[i*6+3] <<  ", " << kernel_params[i*6+4] <<  ", " << kernel_params[i*6+5] << std::endl;
+            }
+            std::vector<size_t> grid{(size_t)kernel_params[i*6]*kernel_params[i*6+3], (size_t)kernel_params[i*6+1]*kernel_params[i*6+4], (size_t)kernel_params[i*6+2]*kernel_params[i*6+5]};
+            std::vector<size_t> block{(size_t)kernel_params[i*6+3], (size_t)kernel_params[i*6+4], (size_t)kernel_params[i*6+5]};
+            for(int j = 0; j < kernel_args.at(i).size(); j++) {
+              if(DEBUGOUT) 
+                std::cout << " the first kernel arg " << kernel_args.at(i).at(j) << std::endl;
+                if(arg2index.find(kernel_args.at(i).at(j)) != arg2index.end()) {
+                  if(DEBUGOUT) 
+                    std::cout <<" the second kernel arg " << arg2index.at(kernel_args.at(i).at(j)) << std::endl;
+                    local_params.push_back(params.at(arg2index.at(kernel_args.at(i).at(j))));
+                    local_params_info.push_back(std::get<1>(new_params_info.at(i).at(j)));
+
+                }
+            }
+            iris_task_kernel(task[i], kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), kernel_args.at(i).size(), local_params.data(), local_params_info.data());
+        } else{
+            size_t value = (size_t)sizes.at(0);
+            iris_task_kernel(task[i], kernel_names.at(i).c_str(), 1, NULL, &value, NULL, 3+pointers, params.data(), params_info.data());
+        }
+
+	    // if(i == kernel_names.size() -1)   
+        //     // iris_task_dmem_flush_out(task[i], *(iris_mem*)local_params.at(0));
+        //   iris_task_d2h_full(task[i], *(iris_mem*)local_params.at(0), args.at(0));  
+
+        iris_graph_task(graph, task[i], iris_gpu, NULL);
+    }
+    // auto start = std::chrono::high_resolution_clock::now();
+    // iris_graph_submit(graph, iris_default, 1);
+    // auto stop = std::chrono::high_resolution_clock::now();
+    // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+
+    // std::cout << "time for iris is" << duration.count() << "us" << std::endl;
+    // platform.finalize();
+    // return getKernelTime();
+}
+
 
 void Executor::retainGraph(){
     iris_graph_retain(graph, true);
@@ -544,11 +793,12 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
     if(DEBUGOUT)
     std::cout << "has the graph been created " << graph_created << std::endl;
   }
-  iris_data_mem_update(io[0], args.at(0));
-  iris_data_mem_update(io[1], args.at(1));
+//   iris_data_mem_update(io[0], args.at(0));
+//   iris_data_mem_update(io[1], args.at(1));
   if(DEBUGOUT)
     std::cout << "Executing graph" << std::endl;
 //   std::cout << "executing graph" << std::endl;
+  multiDeviceScheduling();
   auto start = std::chrono::high_resolution_clock::now();
   iris_graph_submit(graph, iris_default, 1);
   iris_graph_wait(graph);
@@ -558,6 +808,32 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
   // platform.finalize();
   return getKernelTime();
 }
+
+
+// float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, std::string name) {
+//   // iris::Platform platform;
+//   // platform.init(NULL, NULL, true);
+//   if(graph_created == 0) {
+//     createGraph(args, sizes, name);
+//     iris_graph_retain(graph, true);
+//     graph_created = 1;
+//     if(DEBUGOUT)
+//     std::cout << "has the graph been created " << graph_created << std::endl;
+//   }
+//   iris_data_mem_update(io[0], args.at(0));
+//   iris_data_mem_update(io[1], args.at(1));
+//   if(DEBUGOUT)
+//     std::cout << "Executing graph" << std::endl;
+// //   std::cout << "executing graph" << std::endl;
+//   auto start = std::chrono::high_resolution_clock::now();
+//   iris_graph_submit(graph, iris_default, 1);
+//   iris_graph_wait(graph);
+//   auto stop = std::chrono::high_resolution_clock::now();
+//   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+// //   std::cout << "The time is " << duration.count() << std::endl;
+//   // platform.finalize();
+//   return getKernelTime();
+// }
 
 
 void Executor::execute() {

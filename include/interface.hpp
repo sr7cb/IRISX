@@ -229,6 +229,7 @@ public:
     virtual void randomProblemInstance() = 0;
     virtual void semantics(std::string arch) = 0;
     float gpuTime;
+    bool initialized_graph = false;
     void run();
     std::string returnJIT();
     float getTime();
@@ -356,10 +357,22 @@ std::string FFTXProblem::semantics2(std::string arch) {
 
 
 
+// void FFTXProblem::createGraph() {
+//     e.createGraph(args, sizes, name);
+//     e.retainGraph();
+//     gen_executor = true;
+// }
+
 void FFTXProblem::createGraph() {
-    e.createGraph(args, sizes, name);
+    if(!initialized_graph) {
+        e.createGraph(args, sizes, name);
+        initialized_graph = true;
+    } else
+        e.appendGraph(args, sizes, name);
+
     e.retainGraph();
-    gen_executor = true;
+    if(!gen_executor)
+        gen_executor = true;
 }
 
 

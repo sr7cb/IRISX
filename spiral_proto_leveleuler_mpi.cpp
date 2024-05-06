@@ -57,15 +57,15 @@ int main(int argc, char** argv)
 #if defined IRIS
   iris_init(&argc, &argv, 1);
   int n,m,k;
-    n = 32+8; //40
-    m = 32+8; //40
-    k = 4;
-    std::vector<int> sizes{(n-8)*(m-8)*k, n*m*k, 1, 1, 1, n, m};
+    n = 64+8; //40
+    m = 64+8; //40
+    k = 5;
+    std::vector<int> sizes{(n-8)*(m-8)*(n-8)*k, n*m*n*k, 1, 1, 1, n, m};
     double * a = new double[n*m*k];
     double * b = new double[n*m*k];
     double c = 1.4;
     double d =  0.00390625;
-    double e = 1.0 / 64;
+    double e = 1.0 / ((n-8)*2);
     // double c = 1;
     // double d = 1;
     // double e = 1;
@@ -93,8 +93,8 @@ int main(int argc, char** argv)
 #endif
 
     // DEFAULT PARAMETERS
-    int domainSize = 64; //64
-    int boxSize = 32; //32
+    int domainSize = 128; //64
+    int boxSize = 64; //32
     // double maxTime = 1.0;
     // int maxStep = 10;
     double maxTime = 0.25 / domainSize;
@@ -168,6 +168,9 @@ int main(int argc, char** argv)
         time += dt;
         std::cout << k << " " << maxStep << " " << time << " " << maxTime << std::endl;
     }
+
+    pp.transform();
+
 #ifdef PR_MPI
     MPI_Barrier(MPI_COMM_WORLD); /* IMPORTANT */
     end = MPI_Wtime();

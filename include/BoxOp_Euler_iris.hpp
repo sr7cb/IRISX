@@ -247,17 +247,18 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
         //   std::cout << a_Rhs.data()[i] << std::endl;
         // // COMPUTE W_AVE
         int n,m,k;
-        n = 136; //40
-        m = 136; //40
-        k = 4;
-        std::vector<int> sizes{(n-8)*(m-8)*k, n*m*k, 1, 1, 1, n, m};
+        n = 64+8; //40
+        m = 64+8; //40
+        k = 5;
+        std::vector<int> sizes{(n-8)*(m-8)*(n-8)*k, n*m*n*k, 1, 1, 1, n, m};
     
         std::vector<void*> args{a_Rhs.data(), (void*)a_U.data(), (void*)&gamma, (void*)&a_scale, (void*)&dx};
         // std::cout << a_Rhs.data() << std::endl;
         // std::cout << a_U.data() << std::endl;
         pp.setArgs(args);
         pp.setSizes(sizes);
-        pp.transform(); // goes to iris runtime and creates/executes task graph
+        pp.createGraph();
+        // pp.transform(); // goes to iris runtime and creates/executes task graph
         // pp.run();
 
         auto stop = std::chrono::high_resolution_clock::now();
