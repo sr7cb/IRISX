@@ -225,6 +225,7 @@ public:
     void transform();
     void readKernels();
     void createGraph();
+    void resetInput();
     std::string semantics2(std::string arch);
     virtual void randomProblemInstance() = 0;
     virtual void semantics(std::string arch) = 0;
@@ -363,6 +364,10 @@ std::string FFTXProblem::semantics2(std::string arch) {
 //     gen_executor = true;
 // }
 
+void FFTXProblem::resetInput() {
+  e.resetNumberParams();
+}
+
 void FFTXProblem::createGraph() {
     if(!initialized_graph) {
         e.createGraph(args, sizes, name);
@@ -378,11 +383,11 @@ void FFTXProblem::createGraph() {
 
 void FFTXProblem::readKernels(){
 
-    if(gen_executor == true) { //check in memory cache
-        if ( DEBUGOUT) std::cout << "cached size found, running cached instance\n";
-        run();
-    }
-    else { //check filesystem cache
+    if(gen_executor != true) { //check in memory cache
+    //     if ( DEBUGOUT) std::cout << "cached size found, running cached instance\n";
+    //     run();
+    // }
+    // else { //check filesystem cache
         // std::string tmp = getFFTX();
         std::string flag = "";
         if(getIRISARCH().find("openmp") != std::string::npos) {

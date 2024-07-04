@@ -39,29 +39,39 @@ int main(int argc, char** argv) {
   m = 64;
   k = 64;
 
+  int iter = 5;
   std::vector<int> sizes{n*m*k*2, n*m*k*2, n*m*k*2, n, m, k};
+
+  // buildInputBuffer(X, sizes);
+  std::vector<void*> args;
+MDDFTProblem mdp("mddft");
+for(int i = 0; i < iter; i++){
   double *Y, *X, *sym;
   X = new double[n*m*k*2];
   Y = new double[n*m*k*2];
   sym = new double[n*m*k*2];
-  for(int i = 0; i < n*m*k*2; i++) {
-    X[i] = 1.0;
+  for(int ii = 0; ii < n*m*k*2; ii++) {
+    X[ii] = 1.0;
   }
-
-  // buildInputBuffer(X, sizes);
-  std::vector<void*> args{Y,X,sym};
-
-  MDDFTProblem mdp(args,sizes,"mddft");
-  
+  args.push_back(Y);
+  args.push_back(X);
+  args.push_back(sym);
+  mdp.setArgs(args);
+  mdp.setSizes(sizes);
+  mdp.readKernels();
+  mdp.createGraph();
+}
   mdp.transform();
-
   std::cout << "kernel execution time is " << mdp.getTime() << std::endl;
 
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
   std::cout << duration.count() << std::endl;
-  for(int i = 0; i < 10; i++) {
-    std::cout << Y[i] << std::endl;
+  for(int j = 0; j < iter; j++) {
+    for(int i = 0; i < 10; i++) {
+      std::cout << ((double*)args.at(j*3))[i] << " ";
+    }
+    std::cout << std::endl;
   }
 
 //   printf("%s\n", b);

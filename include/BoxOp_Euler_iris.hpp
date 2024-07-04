@@ -3,6 +3,7 @@
 #define _BOX_OP_EULER_
 
 #include "Proto.H"
+
 // #include <iris/iris.hpp>
 // #include <iris/iris_openmp.h>
 // #include <vector>
@@ -252,9 +253,14 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
         k = 5;
         std::vector<int> sizes{(n-8)*(m-8)*(n-8)*k, n*m*n*k, 1, 1, 1, n, m};
     
-        std::vector<void*> args{a_Rhs.data(), (void*)a_U.data(), (void*)&gamma, (void*)&a_scale, (void*)&dx};
-        // std::cout << a_Rhs.data() << std::endl;
-        // std::cout << a_U.data() << std::endl;
+        // std::vector<void*> args{a_Rhs.data(), (void*)a_U.data(), (void*)&gamma, (void*)&a_scale, (void*)&dx};
+        args.push_back(a_Rhs.data());
+        args.push_back((void*)a_U.data());
+        args.push_back((void*)&gamma);
+        args.push_back((void*)&a_scale);
+        args.push_back((void*)&dx);
+        std::cout << "X: " << a_U.data() << std::endl; // double * a; std::cout << a;
+        std::cout << "Y: " << a_Rhs.data() << std::endl;
         pp.setArgs(args);
         pp.setSizes(sizes);
         pp.createGraph();
@@ -264,6 +270,7 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
         std::cout << "The time is " << duration.count() << std::endl;
+        // exit(0);
         // for(int i = 0; i < 10; i++)
         //   std::cout << a_Rhs.data()[i] << std::endl;
 

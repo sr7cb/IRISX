@@ -24,7 +24,7 @@ irisx_proto:
 	g++ -I$(IRIS_PATH)/include -I. -Wunused-result -ggdb -O3 $(CFLAGS) -DPRINTDEBUG -o irisx_proto spiral_proto_leveleuler.cpp $(LDFLAGS)
 
 mddft:
-	g++ -I$(IRIS_PATH)/include -I. -Wunused-result $(CFLAGS) -o irisx_mddft spiral_iris_mddft.cpp $(LDFLAGS)
+	g++ -I$(IRIS_PATH)/include -I. -Wunused-result $(CFLAGS) -DPRINTDEBUG -o irisx_mddft spiral_iris_mddft.cpp $(LDFLAGS)
 
 mdprdft:
 	g++ -I$(IRIS_PATH)/include -I. -Wunused-result -O3 $(CFLAGS) -o irisx_mdprdft spiral_iris_mdprdft.cpp $(LDFLAGS)

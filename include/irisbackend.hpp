@@ -98,7 +98,8 @@ class Executor {
         std::string kernel_preamble;
         std::string kernels;
         std::vector<std::vector<std::string>> kernel_args;
-        std::unordered_map<std::string, int> arg2index; 
+        std::unordered_map<std::string, void*> arg2index;
+        std::unordered_map<void*, void*> args2output; 
         std::vector<std::tuple<std::string, std::string>> sig_types;
         std::vector<std::tuple<std::string, int, std::string>> in_params;
         std::vector<void*> params;
@@ -111,6 +112,7 @@ class Executor {
         int graph_created = 0;
         iris_graph graph;
         iris_mem io[2];
+        int number_params = 0;
     public:
         string_code hashit(std::string const& inString);
         float initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, std::string name);
@@ -123,6 +125,7 @@ class Executor {
         void retainGraph();
         void appendGraph(std::vector<void*>& args, std::vector<int> sizes, std::string name);
         int getGraphCreated();
+        void resetNumberParams();
         std::string getKernels();
 };
 
@@ -314,10 +317,10 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
         // exit(0);
     }
 
-    int number_params = 0;
+    // int number_params = 0;
     if(args.size() != sig_types.size() && !findOpenMP()) {
         std::cout << "this is the passed in sig size " <<  args.size() << " this is the size of kernel " << sig_types.size() << std::endl;
-        std::cout << "Error signatures do not match need to pass more parameters from driver" << std::endl;
+        std::cout << "Error signatures do not match need to pass more parameters from driver to createGraph" << std::endl;
         exit(-1);
     }
 
@@ -354,9 +357,9 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
                     iris_data_mem_create(mem_p, args.at(i), 
                         sizes.at(i) * sizeof(int));
                     iris_register_pin_memory(args.at(i), sizes.at(i) * sizeof(int));
-                    params.push_back(mem_p);
-                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
-                    number_params++;
+                    // params.push_back(mem_p);
+                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), mem_p));
+                    // number_params++;
                     break;
                 }
                 case pointer_float:
@@ -365,33 +368,31 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
                     iris_data_mem_create(mem_p, args.at(i), 
                         sizes.at(i) * sizeof(float));
                     iris_register_pin_memory(args.at(i), sizes.at(i) * sizeof(float));
-                    params.push_back(mem_p);
-                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
-                    number_params++;
+                    // params.push_back(mem_p);
+                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), mem_p));
+                    // number_params++;
                     break;
                 }
                 case pointer_double:
                 {
-                    if(i == 0 || i == 1) {
-                      iris_data_mem_create(&io[i], args.at(i), 
-                        sizes.at(i) * sizeof(double));
-                    params.push_back(&io[i]);
+                    if(args2output.find(args.at(i+number_params)) == args2output.end()) {
+                        iris_mem * mem_p = new iris_mem;
+                        iris_data_mem_create(mem_p, args.at(i+number_params), 
+                            sizes.at(i) * sizeof(double));
+                        iris_register_pin_memory(args.at(i+number_params), sizes.at(i) * sizeof(double));
+                        params.push_back(mem_p);
+                        args2output.insert(std::make_pair(args.at(i+number_params), mem_p));
+                        arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), mem_p));
+                    } else {
+                        arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), args2output.at(args.at(i+number_params))));
                     }
-                    else{
-                    iris_mem * mem_p = new iris_mem;
-                    iris_data_mem_create(mem_p, args.at(i), 
-                        sizes.at(i) * sizeof(double));
-                    params.push_back(mem_p);
-                    }
-                    iris_register_pin_memory(args.at(i), sizes.at(i) * sizeof(double));
                     // params.push_back(mem_p);
-                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
-                    number_params++;
+                    // number_params++;
                     break;
                 }
                 case two:
                 {
-                    params.push_back(args.at(i));
+                    // params.push_back(args.at(i+number_params));
                     for(int j = 0; j < new_params_info.size(); j++) {
                         for(int k = 0; k < new_params_info.at(j).size(); k++) {
                             if(std::get<0>(new_params_info.at(j).at(k)) == std::get<0>(sig_types.at(i))) {
@@ -399,8 +400,8 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
                             }
                         }
                     }
-                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
-                    number_params++;
+                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), args.at(i+number_params)));
+                    // number_params++;
                     break;
                 } 
             }
@@ -417,10 +418,10 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
                 iris_mem * mem_p = new iris_mem;
     		    iris_data_mem_create(mem_p, data.at(i), data_lengths.at(i) * sizeof(double));
                 iris_register_pin_memory(data.at(i), data_lengths.at(i) * sizeof(double));
-                params.push_back(mem_p);
+                // params.push_back(mem_p);
                 pointers++;
-                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
-                number_params++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
+                // number_params++;
                 break;
             }
             case pointer_int:
@@ -428,10 +429,10 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
                 iris_mem * mem_p = new iris_mem;
                 iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(int));
                 iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(int));
-                params.push_back(mem_p);
+                // params.push_back(mem_p);
                 pointers++;
-                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
-                number_params++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
+                // number_params++;
                 break;
             }
             case pointer_float:
@@ -439,10 +440,10 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
                 iris_mem * mem_p = new iris_mem;
                 iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(float));
                 iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(float));
-                params.push_back(mem_p);
+                // params.push_back(mem_p);
                 pointers++;
-                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
-                number_params++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
+                // number_params++;
                 break;
             }
             case pointer_double:
@@ -450,10 +451,10 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
                 iris_mem * mem_p = new iris_mem;
     		    iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
                 iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
-                params.push_back(mem_p);
+                // params.push_back(mem_p);
                 pointers++;
-                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
-                number_params++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
+                // number_params++;
                 break;
             }
             case two:
@@ -461,10 +462,10 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
                 iris_mem * mem_p = new iris_mem;
     		    iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
                 //iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
-                params.push_back(mem_p);
+                // params.push_back(mem_p);
                 pointers++;
-                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
-                number_params++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
+                // number_params++;
                 break;
             }
             default:
@@ -472,7 +473,13 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
         }
     }
 
-    
+    if(DEBUGOUT) {
+    for (const auto& pair : arg2index) {
+        std::cout << pair.first << " ";
+    }
+    std::cout << std::endl;
+    // exit(0);
+    }
     // for(int i = 0; i < new_params_info.size(); i++) {
     //     for(int j = 0; j < new_params_info.at(i).size(); j++)
     //         std::cout << std::get<0>(new_params_info.at(i).at(j)) << " " << std::get<1>(new_params_info.at(i).at(j)) << std::endl;
@@ -502,7 +509,7 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
                 if(arg2index.find(kernel_args.at(i).at(j)) != arg2index.end()) {
                   if(DEBUGOUT) 
                     std::cout <<" the second kernel arg " << arg2index.at(kernel_args.at(i).at(j)) << std::endl;
-                    local_params.push_back(params.at(arg2index.at(kernel_args.at(i).at(j))));
+                    local_params.push_back(arg2index.at(kernel_args.at(i).at(j)));
                     local_params_info.push_back(std::get<1>(new_params_info.at(i).at(j)));
 
                 }
@@ -513,12 +520,14 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
             iris_task_kernel(task[i], kernel_names.at(i).c_str(), 1, NULL, &value, NULL, 3+pointers, params.data(), params_info.data());
         }
 
-	    // if(i == kernel_names.size() -1)   
-        //     // iris_task_dmem_flush_out(task[i], *(iris_mem*)local_params.at(0));
-        //   iris_task_d2h_full(task[i], *(iris_mem*)local_params.at(0), args.at(0));  
+	    if(i == kernel_names.size() -1)   
+            // iris_task_dmem_flush_out(task[i], *(iris_mem*)local_params.at(0));
+          iris_task_d2h_full(task[i], *(iris_mem*)local_params.at(0), args.at(number_params));  
 
         iris_graph_task(graph, task[i], iris_gpu, NULL);
     }
+    arg2index.clear();
+    number_params += sig_types.size();
     // multiDeviceScheduling();
     // auto start = std::chrono::high_resolution_clock::now();
     // iris_graph_submit(graph, iris_default, 1);
@@ -536,7 +545,7 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
     // platform.init(NULL, NULL, true);
     // size_t size = sizes.at(0) * sizes.at(1) * sizes.at(2);
     if ( DEBUGOUT) {
-        std::cout << "In create and run graph" << std::endl;
+        std::cout << "In create and run graph: appendGraph" << std::endl;
         for(int i = 0; i < sizes.size(); i++) {
             std::cout << "size " << i << ": " << sizes.at(i) << " ";
         }
@@ -562,10 +571,11 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
         // exit(0);
     }
 
-    int number_params = 0;
-    if(args.size() != sig_types.size() && !findOpenMP()) {
-        std::cout << "this is the passed in sig size " <<  args.size() << " this is the size of kernel " << sig_types.size() << std::endl;
-        std::cout << "Error signatures do not match need to pass more parameters from driver" << std::endl;
+    // int number_params = 0;
+    int user_size = args.size() - number_params;
+    if(user_size != sig_types.size() && !findOpenMP()) {
+        std::cout << "this is the passed in sig size " <<  user_size << " this is the size of kernel " << sig_types.size() << std::endl;
+        std::cout << "Error signatures do not match need to pass more parameters from driver to appendGraph" << std::endl;
         exit(-1);
     }
 
@@ -602,8 +612,8 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
                     iris_data_mem_create(mem_p, args.at(i), 
                         sizes.at(i) * sizeof(int));
                     iris_register_pin_memory(args.at(i), sizes.at(i) * sizeof(int));
-                    params.push_back(mem_p);
-                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
+                    // params.push_back(mem_p);
+                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), mem_p));
                     number_params++;
                     break;
                 }
@@ -613,33 +623,32 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
                     iris_data_mem_create(mem_p, args.at(i), 
                         sizes.at(i) * sizeof(float));
                     iris_register_pin_memory(args.at(i), sizes.at(i) * sizeof(float));
-                    params.push_back(mem_p);
-                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
+                    // params.push_back(mem_p);
+                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), mem_p));
                     number_params++;
                     break;
                 }
                 case pointer_double:
                 {
-                    if(i == 0 || i == 1) {
-                      iris_data_mem_create(&io[i], args.at(i), 
-                        sizes.at(i) * sizeof(double));
-                    params.push_back(&io[i]);
+                    // std::cout << "hello from appendgraph get value" << std::endl;
+                    // std::cout << "the size of the input is " << args.size() << std::endl;
+                    if(args2output.find(args.at(i+number_params)) == args2output.end()) {
+                        iris_mem * mem_p = new iris_mem;
+                        iris_data_mem_create(mem_p, args.at(i+number_params), 
+                            sizes.at(i) * sizeof(double));
+                        iris_register_pin_memory(args.at(i+number_params), sizes.at(i) * sizeof(double));
+                        args2output.insert(std::make_pair(args.at(i+number_params), mem_p));
+                        arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), mem_p));
+                    } else {
+                        arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), args2output.at(args.at(i+number_params))));
                     }
-                    else{
-                    iris_mem * mem_p = new iris_mem;
-                    iris_data_mem_create(mem_p, args.at(i), 
-                        sizes.at(i) * sizeof(double));
-                    params.push_back(mem_p);
-                    }
-                    iris_register_pin_memory(args.at(i), sizes.at(i) * sizeof(double));
                     // params.push_back(mem_p);
-                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
-                    number_params++;
+                    // number_params++;
                     break;
                 }
                 case two:
                 {
-                    params.push_back(args.at(i));
+                    // params.push_back(args.at(i+number_params));
                     for(int j = 0; j < new_params_info.size(); j++) {
                         for(int k = 0; k < new_params_info.at(j).size(); k++) {
                             if(std::get<0>(new_params_info.at(j).at(k)) == std::get<0>(sig_types.at(i))) {
@@ -647,8 +656,8 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
                             }
                         }
                     }
-                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), number_params));
-                    number_params++;
+                    arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), args.at(i+number_params)));
+                    // number_params++;
                     break;
                 } 
             }
@@ -665,10 +674,10 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
                 iris_mem * mem_p = new iris_mem;
     		    iris_data_mem_create(mem_p, data.at(i), data_lengths.at(i) * sizeof(double));
                 iris_register_pin_memory(data.at(i), data_lengths.at(i) * sizeof(double));
-                params.push_back(mem_p);
+                // params.push_back(mem_p);
                 pointers++;
-                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
-                number_params++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
+                // number_params++;
                 break;
             }
             case pointer_int:
@@ -676,10 +685,10 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
                 iris_mem * mem_p = new iris_mem;
                 iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(int));
                 iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(int));
-                params.push_back(mem_p);
+                // params.push_back(mem_p);
                 pointers++;
-                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
-                number_params++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
+                // number_params++;
                 break;
             }
             case pointer_float:
@@ -687,10 +696,10 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
                 iris_mem * mem_p = new iris_mem;
                 iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(float));
                 iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(float));
-                params.push_back(mem_p);
+                // params.push_back(mem_p);
                 pointers++;
-                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
-                number_params++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
+                // number_params++;
                 break;
             }
             case pointer_double:
@@ -698,10 +707,10 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
                 iris_mem * mem_p = new iris_mem;
     		    iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
                 iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
-                params.push_back(mem_p);
+                // params.push_back(mem_p);
                 pointers++;
-                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
-                number_params++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
+                // number_params++;
                 break;
             }
             case two:
@@ -709,10 +718,10 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
                 iris_mem * mem_p = new iris_mem;
     		    iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
                 //iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
-                params.push_back(mem_p);
+                // params.push_back(mem_p);
                 pointers++;
-                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), number_params));
-                number_params++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
+                // number_params++;
                 break;
             }
             default:
@@ -720,7 +729,7 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
         }
     }
 
-    
+
     // for(int i = 0; i < new_params_info.size(); i++) {
     //     for(int j = 0; j < new_params_info.at(i).size(); j++)
     //         std::cout << std::get<0>(new_params_info.at(i).at(j)) << " " << std::get<1>(new_params_info.at(i).at(j)) << std::endl;
@@ -750,7 +759,7 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
                 if(arg2index.find(kernel_args.at(i).at(j)) != arg2index.end()) {
                   if(DEBUGOUT) 
                     std::cout <<" the second kernel arg " << arg2index.at(kernel_args.at(i).at(j)) << std::endl;
-                    local_params.push_back(params.at(arg2index.at(kernel_args.at(i).at(j))));
+                    local_params.push_back(arg2index.at(kernel_args.at(i).at(j)));
                     local_params_info.push_back(std::get<1>(new_params_info.at(i).at(j)));
 
                 }
@@ -761,12 +770,14 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
             iris_task_kernel(task[i], kernel_names.at(i).c_str(), 1, NULL, &value, NULL, 3+pointers, params.data(), params_info.data());
         }
 
-	    // if(i == kernel_names.size() -1)   
-        //     // iris_task_dmem_flush_out(task[i], *(iris_mem*)local_params.at(0));
-        //   iris_task_d2h_full(task[i], *(iris_mem*)local_params.at(0), args.at(0));  
+	    if(i == kernel_names.size() -1)   
+            // iris_task_dmem_flush_out(task[i], *(iris_mem*)local_params.at(0));
+          iris_task_d2h_full(task[i], *(iris_mem*)local_params.at(0), args.at(number_params));  
 
         iris_graph_task(graph, task[i], iris_gpu, NULL);
     }
+    arg2index.clear();
+    number_params += sig_types.size();
     // auto start = std::chrono::high_resolution_clock::now();
     // iris_graph_submit(graph, iris_default, 1);
     // auto stop = std::chrono::high_resolution_clock::now();
@@ -798,7 +809,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
   if(DEBUGOUT)
     std::cout << "Executing graph" << std::endl;
 //   std::cout << "executing graph" << std::endl;
-  multiDeviceScheduling();
+//   multiDeviceScheduling();
   auto start = std::chrono::high_resolution_clock::now();
   iris_graph_submit(graph, iris_default, 1);
   iris_graph_wait(graph);
@@ -947,6 +958,9 @@ int Executor::getGraphCreated() {
   return graph_created;
 }
 
+void Executor::resetNumberParams() {
+  number_params = 0;
+}
 
 float Executor::getKernelTime() {
     return CPUTime;

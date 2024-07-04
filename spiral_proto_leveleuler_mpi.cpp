@@ -6,7 +6,7 @@
 #include "Proto.H"
 #include <chrono>
 // #include "examples/_common/InputParser.H"
-#include "examples/_common/LevelRK4.H"
+
 #if defined IRIS
 #include <iris/iris.hpp>
 #include <iris/iris_openmp.h>
@@ -17,10 +17,12 @@
 #include <include/protoeulerlib.hpp>
 #pragma GCC diagnostic pop
 ProtoProblem pp("leveleuler");
+std::vector<void*> args;
 #include "include/BoxOp_Euler_iris.hpp"
 #else
 #include "include/BoxOp_Euler.hpp"
 #endif
+#include "examples/_common/LevelRK4.H"
 using namespace Proto;
 
 
@@ -52,8 +54,6 @@ PROTO_KERNEL_END(f_initialize_, f_initialize)
 int main(int argc, char** argv)
 {
 
-
-
 #if defined IRIS
   iris_init(&argc, &argv, 1);
   int n,m,k;
@@ -69,15 +69,15 @@ int main(int argc, char** argv)
     // double c = 1;
     // double d = 1;
     // double e = 1;
-    std::vector<void*> args{a, b, &c, &d, &e};
-    pp.setArgs(args);
+    std::vector<void*> largs{a, b, &c, &d, &e};
+    pp.setArgs(largs);
     pp.setSizes(sizes);
     pp.readKernels();
     #if defined TIME 
         std::cout << "Hello from inner time\n";
         auto start = std::chrono::high_resolution_clock::now();
     #endif
-    pp.createGraph();
+    // pp.createGraph();
 #endif
 
 #if defined TIME && !defined IRIS
@@ -169,7 +169,7 @@ int main(int argc, char** argv)
         std::cout << k << " " << maxStep << " " << time << " " << maxTime << std::endl;
     }
 
-    pp.transform();
+    // pp.transform();
 
 #ifdef PR_MPI
     MPI_Barrier(MPI_COMM_WORLD); /* IMPORTANT */
