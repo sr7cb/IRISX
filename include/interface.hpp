@@ -231,6 +231,7 @@ public:
     virtual void semantics(std::string arch) = 0;
     float gpuTime;
     bool initialized_graph = false;
+    bool dont_append = false;
     void run();
     std::string returnJIT();
     float getTime();
@@ -369,6 +370,7 @@ void FFTXProblem::resetInput() {
 }
 
 void FFTXProblem::createGraph() {
+  if(!dont_append) {
     if(!initialized_graph) {
         e.createGraph(args, sizes, name);
         initialized_graph = true;
@@ -378,6 +380,7 @@ void FFTXProblem::createGraph() {
     e.retainGraph();
     if(!gen_executor)
         gen_executor = true;
+  }
 }
 
 
@@ -466,6 +469,7 @@ void FFTXProblem::transform(){
         if(gen_executor == true) { //check in memory cache
             if ( DEBUGOUT) std::cout << "cached size found, running cached instance\n";
             run();
+            dont_append = true;
         }
         else { //check filesystem cache
             // std::string tmp = getFFTX();
@@ -510,6 +514,7 @@ void FFTXProblem::transform(){
             e.execute();
             run();
             gen_executor = true;
+            dont_append = true;
             // executors.insert(std::make_pair(sizes, e));
             // else { //generate code at runtime
             //     std::cout << "haven't seen size, generating\n";

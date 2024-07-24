@@ -321,6 +321,7 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
     if(args.size() != sig_types.size() && !findOpenMP()) {
         std::cout << "this is the passed in sig size " <<  args.size() << " this is the size of kernel " << sig_types.size() << std::endl;
         std::cout << "Error signatures do not match need to pass more parameters from driver to createGraph" << std::endl;
+        std::cout << "Verify that the generateed kernel files are the problem you want to run" << std::endl;
         exit(-1);
     }
 
@@ -526,6 +527,10 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
 
         iris_graph_task(graph, task[i], iris_gpu, NULL);
     }
+    // if(DEBUGOUT) {
+      std::cout << "number of tasks added " << kernel_names.size() << std::endl;
+      std::cout << "total number of tasks in graph " << iris_graph_tasks_count(graph) << std::endl;
+    // }
     arg2index.clear();
     number_params += sig_types.size();
     // multiDeviceScheduling();
@@ -576,6 +581,7 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
     if(user_size != sig_types.size() && !findOpenMP()) {
         std::cout << "this is the passed in sig size " <<  user_size << " this is the size of kernel " << sig_types.size() << std::endl;
         std::cout << "Error signatures do not match need to pass more parameters from driver to appendGraph" << std::endl;
+        std::cout << "Verify that the generateed kernel files are the problem you want to run" << std::endl;
         exit(-1);
     }
 
@@ -776,6 +782,10 @@ void Executor::appendGraph(std::vector<void*>& args, std::vector<int> sizes, std
 
         iris_graph_task(graph, task[i], iris_gpu, NULL);
     }
+    // if(DEBUGOUT) {
+      std::cout << "number of tasks added " << kernel_names.size() << std::endl;
+      std::cout << "total number of tasks in graph " << iris_graph_tasks_count(graph) << std::endl;
+    // }
     arg2index.clear();
     number_params += sig_types.size();
     // auto start = std::chrono::high_resolution_clock::now();
