@@ -56,22 +56,22 @@ int main(int argc, char** argv)
 
 #if defined IRIS
   iris_init(&argc, &argv, 1);
-  int n,m,k;
-    n = 64+8; //40
-    m = 64+8; //40
-    k = 5;
-    std::vector<int> sizes{(n-8)*(m-8)*(n-8)*k, n*m*n*k, 1, 1, 1, n, m};
-    double * a = new double[n*m*k];
-    double * b = new double[n*m*k];
-    double c = 1.4;
-    double d =  0.00390625;
-    double e = 1.0 / ((n-8)*2);
-    // double c = 1;
-    // double d = 1;
-    // double e = 1;
-    std::vector<void*> largs{a, b, &c, &d, &e};
-    pp.setArgs(largs);
-    pp.setSizes(sizes);
+  // int n,m,k;
+  //   n = 64+8; //40
+  //   m = 64+8; //40
+  //   k = 5;
+  //   std::vector<int> sizes{(n-8)*(m-8)*(n-8)*k, n*m*n*k, 1, 1, 1, n, m};
+  //   double * a = new double[n*m*k];
+  //   double * b = new double[n*m*k];
+  //   double c = 1.4;
+  //   double d =  0.00390625;
+  //   double e = 1.0 / ((n-8)*2);
+  //   // double c = 1;
+  //   // double d = 1;
+  //   // double e = 1;
+  //   std::vector<void*> largs{a, b, &c, &d, &e};
+  //   pp.setArgs(largs);
+  //   pp.setSizes(sizes);
     pp.readKernels();
     #if defined TIME 
         std::cout << "Hello from inner time\n";
