@@ -62,6 +62,44 @@ for(int i = 0; i < iter; i++){
   mdp.createGraph();
 }
   mdp.transform();
+    for(int j = 0; j < iter; j++) {
+    for(int i = 0; i < 10; i++) {
+      std::cout << ((double*)args.at(j*3))[i] << " ";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << "checking first round clearing args" << std::endl;
+  for(int i = 0; i < args.size(); i++) {
+    std::cout << (double*)(args.at(i)) << std::endl;
+    delete [](double*)(args.at(i));
+  }
+  args.clear();
+  std::cout << args.size() << std::endl;
+for(int i = 0; i < iter; i++){
+  double *Y, *X, *sym;
+  X = new double[n*m*k*2];
+  Y = new double[n*m*k*2];
+  sym = new double[n*m*k*2];
+  for(int ii = 0; ii < n*m*k*2; ii++) {
+    X[ii] = 1.0;
+  }
+  args.push_back(Y);
+  args.push_back(X);
+  args.push_back(sym);
+  mdp.setArgs(args);
+  mdp.setSizes(sizes);
+  // mdp.readKernels();
+  // mdp.createGraph();
+}
+  std::cout << args.size() << std::endl;
+  mdp.transform();
+  std::cout << "fixed graph new inputs" << std::endl;
+  for(int j = 0; j < iter; j++) {
+    for(int i = 0; i < 10; i++) {
+      std::cout << ((double*)args.at(j*3))[i] << " ";
+    }
+    std::cout << std::endl;
+  }
   std::cout << "kernel execution time is " << mdp.getTime() << std::endl;
 
   auto stop = std::chrono::high_resolution_clock::now();

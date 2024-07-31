@@ -372,10 +372,10 @@ void FFTXProblem::resetInput() {
 void FFTXProblem::createGraph() {
   if(!dont_append) {
     if(!initialized_graph) {
-        e.createGraph(args, sizes, name);
+        e.createGraph(args, sizes, name, initialized_graph);
         initialized_graph = true;
     } else
-        e.appendGraph(args, sizes, name);
+        e.createGraph(args, sizes, name, initialized_graph);
 
     e.retainGraph();
     if(!gen_executor)
