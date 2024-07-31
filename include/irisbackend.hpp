@@ -541,7 +541,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
   // std::cout << "the size of sig mem is" << index2mem.size() << " and " << args2output.size() << std::endl;
   for(int i = 0; i < args.size(); i++) {
     if(index2mem.find(i) != index2mem.end()) {
-      if(args2output.find(args.at(i)) == args2output.end()) {
+      //if(args2output.find(args.at(i)) == args2output.end() || args2output.find(args.at(i)) != args2output.end()) {
         std::cout << "updated host pointer dmem object " << i << std::endl;
         iris_data_mem_update(*index2mem.at(i), args.at(i));
         for (auto it = args2output.begin(); it != args2output.end(); ) {
@@ -553,7 +553,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
           }
         }
         args2output.insert(std::make_pair(args.at(i), index2mem.at(i)));
-      }
+      //}
     }
   }
 
