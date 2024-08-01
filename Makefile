@@ -1,5 +1,5 @@
-IRIS_PATH=/home/h82/.iris
-PROTO_PATH="/home/h82/Documents/Bluestone/Proto/proto_gpu"
+IRIS_PATH=${IRIS}
+PROTO_PATH=${PROTO}
 CONSTANTS= -DDIM=2 -DHDF5=off -DPR_MPI=on
 LDFLAGS=-L$(IRIS)/lib64 -L$(IRIS)/lib -liris -lpthread -ldl
 MPI_COMPILE_FLAGS = $(shell mpicc --showme:compile)
@@ -14,10 +14,6 @@ proto_no_mpi_cuda:
 
 proto_no_mpi_hip:
 	hipcc --std=c++17 -ggdb -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH) -I/opt/rocm-5.7.1/include/roctracer -L/opt/rocm-5.7.1/lib -O3 -DDIM=2 -DPROTO_ACCEL -DPROTO_HIP -DHDF5=off -DTIME -o proto_no_mpi_hip spiral_proto_leveleuler_mpi.cpp $(LDFLAGS) 
-
-
-irisx_proto_no_mpi:
-	g++ --std=c++17 -ggdb -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH) -O3 -DDIM=3 -DAMR=on -DMMB=off -DHDF5=off -DDEBUG=off -DTIME -DIRIS -o irisx_proto_no_mpi spiral_proto_leveleuler_mpi.cpp $(LDFLAGS) 
 
 irisx_proto_no_mpi:
 	g++ --std=c++17 -ggdb -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH) -O3 -DDIM=3 -DAMR=on -DMMB=off -DHDF5=off -DDEBUG=off -DTIME -DIRIS -o irisx_proto_no_mpi spiral_proto_leveleuler_mpi.cpp $(LDFLAGS) 
