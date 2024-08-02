@@ -1,5 +1,5 @@
 IRIS_PATH=${IRIS}
-PROTO_PATH=/ccs/home/sanilrao/proto
+PROTO_PATH=${HOME}/cleanproto
 CONSTANTS= -DDIM=2 -DHDF5=off -DPR_MPI=on
 LDFLAGS=-L$(IRIS)/lib64 -L$(IRIS)/lib -liris -lpthread -ldl
 MPI_COMPILE_FLAGS = $(shell mpicc --showme:compile)
@@ -14,7 +14,7 @@ proto_no_mpi:
 
 
 proto_no_mpi_iris:
-	g++ --std=c++17 -ggdb -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH) -O3 -DDIM=2 -DHDF5=off -DTIME -DIRIS -o spiral_proto_no_mpi_iris spiral_proto_leveleuler_mpi.cpp $(LDFLAGS) 
+	g++ --std=c++17 -ggdb -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH) -O3 -DDIM=3 -DHDF5=off -DTIME -DIRIS -o spiral_proto_no_mpi_iris spiral_proto_leveleuler_mpi.cpp $(LDFLAGS) 
 
 
 proto_mpi:

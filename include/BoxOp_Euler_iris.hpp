@@ -246,11 +246,18 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
         // for(int i = 0; i < 10; i++)
         //   std::cout << a_Rhs.data()[i] << std::endl;
         // // COMPUTE W_AVE
+        // int n,m,k;
+        // n = 136; //40
+        // m = 136; //40
+        // k = 4;
         int n,m,k;
-        n = 136; //40
-        m = 136; //40
-        k = 4;
-        std::vector<int> sizes{(n-8)*(m-8)*k, n*m*k, 1, 1, 1, n, m};
+        n = 64+8;
+        m = 64+8;
+        k = 5;
+
+        // std::vector<int> sizes{(n-8)*(m-8)*k, n*m*k, 1, 1, 1, n, m};
+        std::vector<int> sizes{(n-8)*(m-8)*(n-8)*k, n*m*n*k, 1, 1, 1, n, m};
+
     
         std::vector<void*> args{a_Rhs.data(), (void*)a_U.data(), (void*)&gamma, (void*)&a_scale, (void*)&dx};
         // std::cout << a_Rhs.data() << std::endl;
