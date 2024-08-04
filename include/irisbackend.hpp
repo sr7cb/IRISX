@@ -508,7 +508,7 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
     /*arguement reset for DAG fusion*/
     arg2index.clear();
     number_params += sig_types.size();
-    // multiDeviceScheduling();
+    multiDeviceScheduling();
 }
 
 void Executor::retainGraph(){
@@ -554,6 +554,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   CPUTime = duration.count();
+  std::cout << "graph submission time: " << duration.count() << std::endl;
   return getKernelTime();
 }
 
@@ -686,15 +687,21 @@ void Executor::multiDeviceScheduling(){
     iris_graph_get_tasks(graph, tasks);
     for(int i=0; i<ntasks; i++) {
         iris_task task = tasks[i];
-        // printf("task %s and task id %d\n", iris_task_get_name(task), i );
+        printf("task %s and task serial %d, total devices %d, device %d \n", iris_task_get_name(task), i, ndevices, id );
         //int id = dev_map[r%nrows][c%ncols];
-        if(i >=8 && i <= 12)
+
+        /*if(i >=8 && i <= 12)
           id = 1;
         // else if(i >= 13 && i <= 17)
         //   id = 2;
         else
           id = 0;
+        */
         iris_task_set_policy(task, id);
+        if (((i+1) % 19) == 0) {
+            id = id + 1;
+            if (id == ndevices) id = 0;
+        }
     }
 }
 #endif            //  FFTX_MDDFT_HIPBACKEND_HEADER
