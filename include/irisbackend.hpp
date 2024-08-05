@@ -35,6 +35,7 @@
 #define DEBUGOUT 0
 #endif
 
+//#define ENABLE_TASK_FUSION
 // std::string getIRISARCH() {
 //     const char * tmp2 = std::getenv("IRIS_ARCHS");
 //     std::string tmp(tmp2 ? tmp2 : "");
@@ -459,8 +460,13 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
     if(!iris_graph_created)
       iris_graph_create(&graph);
 
+#ifndef ENABLE_TASK_FUSION
     /*Task creation*/
     iris_task task[kernel_names.size()];
+#else
+    iris_task task;
+#endif
+
     if(DEBUGOUT) {
       std::cout << "number of kernels is: " << kernel_names.size() << std::endl;
     }
@@ -468,7 +474,12 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
       if(DEBUGOUT) {
         std::cout << "kernel name: " << kernel_names.at(i) << std::endl;
       }
+
+#ifndef ENABLE_TASK_FUSION
         iris_task_create(&task[i]);
+#else
+        if(i == 0) iris_task_create(&task);
+#endif
         std::vector<void*> local_params;
         std::vector<int> local_params_info; 
         if((getIRISARCH().find("cuda") != std::string::npos || getIRISARCH().find("hip") != std::string::npos || getIRISARCH().find("opencl") != std::string::npos) && !findOpenMP()) {
@@ -489,17 +500,34 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
 
                 }
             }
+#ifndef ENABLE_TASK_FUSION
             iris_task_kernel(task[i], kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), kernel_args.at(i).size(), local_params.data(), local_params_info.data());
+#else
+            iris_task_kernel(task, kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), kernel_args.at(i).size(), local_params.data(), local_params_info.data());
+#endif
         } else{/*CPU task creation DEPRECATED*/
             size_t value = (size_t)sizes.at(0);
+#ifndef ENABLE_TASK_FUSION
             iris_task_kernel(task[i], kernel_names.at(i).c_str(), 1, NULL, &value, NULL, 3+pointers, params.data(), params_info.data());
+#else
+            iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, &value, NULL, 3+pointers, params.data(), params_info.data());
+#endif
         }
-
       /*output flush to host*/
-	    if(i == kernel_names.size() -1)   
+	    if(i == kernel_names.size() -1)
+#ifndef ENABLE_TASK_FUSION
           iris_task_d2h_full(task[i], *(iris_mem*)local_params.at(0), args.at(number_params));  
-
+#else
+          iris_task_d2h_full(task, *(iris_mem*)local_params.at(0), args.at(number_params));  
+#endif
+ 
+#ifndef ENABLE_TASK_FUSION
         iris_graph_task(graph, task[i], iris_gpu, NULL);
+#else
+	    if(i == 0)
+            iris_graph_task(graph, task, iris_gpu, NULL);
+#endif
+ 
     }
     if(DEBUGOUT) {
       std::cout << "number of tasks added " << kernel_names.size() << std::endl;
@@ -547,7 +575,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 
   if(DEBUGOUT)
     std::cout << "Executing graph" << std::endl;
-
+#ifndef GRAPH_MULTIPLE_EXECUTION
   auto start = std::chrono::high_resolution_clock::now();
   iris_graph_submit(graph, iris_default, 1);
   iris_graph_wait(graph);
@@ -555,6 +583,34 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   CPUTime = duration.count();
   std::cout << "graph submission time: " << duration.count() << std::endl;
+#else
+  for(int m = 0; m < 10; m++){
+    for(int i = 0; i < args.size(); i++) {
+        if(index2mem.find(i) != index2mem.end()) {
+            std::cout << "updated host pointer dmem object " << i << std::endl;
+            iris_data_mem_update(*index2mem.at(i), args.at(i));
+            for (auto it = args2output.begin(); it != args2output.end(); ) {
+                if (it->second == index2mem.at(i)) {
+                    it = args2output.erase(it);
+                break;
+                } else {
+                    ++it; 
+                }
+            }
+            args2output.insert(std::make_pair(args.at(i), index2mem.at(i)));
+        }
+    } 
+  
+    auto start = std::chrono::high_resolution_clock::now();
+    iris_graph_submit(graph, iris_default, 1);
+    iris_graph_wait(graph);
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    CPUTime = duration.count();
+    std::cout << "graph submission time: " << duration.count() << std::endl;
+  }
+#endif
+
   return getKernelTime();
 }
 
@@ -698,7 +754,8 @@ void Executor::multiDeviceScheduling(){
           id = 0;
         */
         iris_task_set_policy(task, id);
-        if (((i+1) % 19) == 0) {
+        if (((i+1) % 2) == 0) {
+        //if (((i+1) % 19) == 0) {
             id = id + 1;
             if (id == ndevices) id = 0;
         }
