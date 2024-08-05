@@ -35,7 +35,8 @@
 #define DEBUGOUT 0
 #endif
 
-//#define ENABLE_TASK_FUSION
+#define ENABLE_TASK_FUSION
+//#define GRAPH_MULTIPLE_EXECUTION
 // std::string getIRISARCH() {
 //     const char * tmp2 = std::getenv("IRIS_ARCHS");
 //     std::string tmp(tmp2 ? tmp2 : "");
@@ -559,7 +560,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
   /*IRISX host memory update on each graph submission*/
   for(int i = 0; i < args.size(); i++) {
     if(index2mem.find(i) != index2mem.end()) {
-      std::cout << "updated host pointer dmem object " << i << std::endl;
+      //std::cout << "updated host pointer dmem object " << i << std::endl;
       iris_data_mem_update(*index2mem.at(i), args.at(i));
       for (auto it = args2output.begin(); it != args2output.end(); ) {
         if (it->second == index2mem.at(i)) {
@@ -587,7 +588,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
   for(int m = 0; m < 10; m++){
     for(int i = 0; i < args.size(); i++) {
         if(index2mem.find(i) != index2mem.end()) {
-            std::cout << "updated host pointer dmem object " << i << std::endl;
+            //std::cout << "updated host pointer dmem object " << i << std::endl;
             iris_data_mem_update(*index2mem.at(i), args.at(i));
             for (auto it = args2output.begin(); it != args2output.end(); ) {
                 if (it->second == index2mem.at(i)) {
@@ -736,14 +737,14 @@ void Executor::multiDeviceScheduling(){
     //int dev_map[16][16];
     int id = 0;  
 	int ntasks = iris_graph_tasks_count(graph);
-    printf(" Number of devices: %d and Number of tasks %d \n", ndevices, ntasks);
+    //printf(" Number of devices: %d and Number of tasks %d \n", ndevices, ntasks);
     iris_task *tasks = NULL;
     if (ntasks > 0)
         tasks = (iris_task *)malloc(sizeof(iris_task)*ntasks);
     iris_graph_get_tasks(graph, tasks);
     for(int i=0; i<ntasks; i++) {
         iris_task task = tasks[i];
-        printf("task %s and task serial %d, total devices %d, device %d \n", iris_task_get_name(task), i, ndevices, id );
+        //printf("task %s and task serial %d, total devices %d, device %d \n", iris_task_get_name(task), i, ndevices, id );
         //int id = dev_map[r%nrows][c%ncols];
 
         /*if(i >=8 && i <= 12)
@@ -754,8 +755,13 @@ void Executor::multiDeviceScheduling(){
           id = 0;
         */
         iris_task_set_policy(task, id);
+
+#ifndef ENABLE_TASK_FUSION
+        if (((i+1) % 19) == 0) {
+#else
         if (((i+1) % 2) == 0) {
-        //if (((i+1) % 19) == 0) {
+#endif
+ 
             id = id + 1;
             if (id == ndevices) id = 0;
         }
