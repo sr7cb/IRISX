@@ -36,7 +36,7 @@
 #endif
 
 #define ENABLE_TASK_FUSION
-//#define GRAPH_MULTIPLE_EXECUTION
+#define GRAPH_MULTIPLE_EXECUTION
 // std::string getIRISARCH() {
 //     const char * tmp2 = std::getenv("IRIS_ARCHS");
 //     std::string tmp(tmp2 ? tmp2 : "");
@@ -582,6 +582,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
   iris_graph_wait(graph);
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+  std::cout << "Graph submission time: " << duration.count() << std::endl;
   CPUTime = duration.count();
   std::cout << "graph submission time: " << duration.count() << std::endl;
 #else
@@ -759,7 +760,7 @@ void Executor::multiDeviceScheduling(){
 #ifndef ENABLE_TASK_FUSION
         if (((i+1) % 19) == 0) {
 #else
-        if (((i+1) % 2) == 0) {
+        if (((i+1) % 1) == 0) {
 #endif
  
             id = id + 1;

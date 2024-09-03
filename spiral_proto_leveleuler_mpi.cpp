@@ -75,7 +75,7 @@ int main(int argc, char** argv)
   //   pp.setSizes(sizes);
     pp.readKernels();
     #if defined TIME 
-        std::cout << "Hello from inner time\n";
+        //std::cout << "Hello from inner time\n";
         auto start = std::chrono::high_resolution_clock::now();
     #endif
     // pp.createGraph();
@@ -94,8 +94,8 @@ int main(int argc, char** argv)
 #endif
 
     // DEFAULT PARAMETERS
-    int domainSize = 128; //64
-    int boxSize = 64; //32
+    int domainSize =512;//128; //64
+    int boxSize = 64;//64; //32
     // double maxTime = 1.0;
     // int maxStep = 10;
     double maxTime = 0.25 / domainSize;
@@ -167,7 +167,7 @@ int main(int argc, char** argv)
 #endif
         }
         time += dt;
-        std::cout << k << " " << maxStep << " " << time << " " << maxTime << std::endl;
+        // std::cout << k << " " << maxStep << " " << time << " " << maxTime << std::endl;
     }
 
     // pp.transform();

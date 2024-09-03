@@ -243,7 +243,7 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
         PR_TIME("BoxOp_Euler::operator()");  
 
          a_Rhs.setVal(0.0);
-        auto start = std::chrono::high_resolution_clock::now();    
+        // auto start = std::chrono::high_resolution_clock::now();    
         // for(int i = 0; i < 10; i++)
         //   std::cout << a_Rhs.data()[i] << std::endl;
         // // COMPUTE W_AVE
@@ -259,17 +259,17 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
         args.push_back((void*)&gamma);
         args.push_back((void*)&a_scale);
         args.push_back((void*)&dx);
-        std::cout << "X: " << a_U.data() << std::endl; // double * a; std::cout << a;
-        std::cout << "Y: " << a_Rhs.data() << std::endl;
+        // std::cout << "X: " << a_U.data() << std::endl; // double * a; std::cout << a;
+        // std::cout << "Y: " << a_Rhs.data() << std::endl;
         pp.setArgs(args);
         pp.setSizes(sizes);
         pp.createGraph();
         // pp.transform(); // goes to iris runtime and creates/executes task graph
         // pp.run();
 
-        auto stop = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-        std::cout << "The time is " << duration.count() << std::endl;
+        // auto stop = std::chrono::high_resolution_clock::now();
+        // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        // std::cout << "The time is " << duration.count() << std::endl;
         // exit(0);
         // for(int i = 0; i < 10; i++)
         //   std::cout << a_Rhs.data()[i] << std::endl;
