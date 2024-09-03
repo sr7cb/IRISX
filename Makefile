@@ -1,11 +1,12 @@
 IRIS_PATH=${IRIS}
-PROTO_PATH=${HOME}/cleanproto
+PROTO_PATH=${PROTO}
 CONSTANTS= -DDIM=2 -DHDF5=off -DPR_MPI=on
 LDFLAGS=-L$(IRIS)/lib64 -L$(IRIS)/lib -liris -lpthread -ldl
 MPI_COMPILE_FLAGS = $(shell mpicc --showme:compile)
 MPI_LINK_FLAGS = $(shell mpicc --showme:link)
 CFLAGS=-pg
 
+all: proto_no_mpi_iris
 conv:
 	g++ $(INTELFLAGS) -I$(IRIS_PATH)/include -I. -Wunused-result -O3 -DPRINTDEBUG -o irisx_convolution spiral_iris_convolution.cpp $(LDFLAGS)
 
@@ -41,4 +42,5 @@ kernel.ptx: kernel.cu
 	nvcc -ptx $^
 
 clean:
-	-rm *.out *.cu *.ptx *.hip.cpp *.hip *_openmp.c *_host2cuda.c *_host2hip.c *.so
+	rm *.out *.so spiral_proto_no_mpi_iris
+	# -rm *.out *.cu *.ptx *.hip.cpp *.hip *_openmp.c *_host2cuda.c *_host2hip.c *.so

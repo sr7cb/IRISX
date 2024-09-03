@@ -57,8 +57,8 @@ int main(int argc, char** argv)
 #if defined IRIS
   iris_init(&argc, &argv, 1);
   int n,m,k;
-    n = 64+8; //40
-    m = 64+8; //40
+    n = 40;//64+8; //40
+    m = 40;//64+8; //40
     k = 5;
     std::vector<int> sizes{(n-8)*(m-8)*(n-8)*k, n*m*n*k, 1, 1, 1, n, m};
     double * a = new double[n*m*n*k];
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
     pp.setSizes(sizes);
     pp.readKernels();
     #if defined TIME 
-        std::cout << "Hello from inner time\n";
+        //std::cout << "Hello from inner time\n";
         auto start = std::chrono::high_resolution_clock::now();
     #endif
     pp.createGraph();
@@ -93,8 +93,8 @@ int main(int argc, char** argv)
 #endif
 
     // DEFAULT PARAMETERS
-    int domainSize = 128; //64
-    int boxSize = 64; //32
+    int domainSize = 256;// 128; //64
+    int boxSize = 32;//64; //32
     // double maxTime = 1.0;
     // int maxStep = 10;
     double maxTime = 0.25 / domainSize;
@@ -166,7 +166,7 @@ int main(int argc, char** argv)
 #endif
         }
         time += dt;
-        std::cout << k << " " << maxStep << " " << time << " " << maxTime << std::endl;
+        //std::cout << k << " " << maxStep << " " << time << " " << maxTime << std::endl;
     }
 #ifdef PR_MPI
     MPI_Barrier(MPI_COMM_WORLD); /* IMPORTANT */

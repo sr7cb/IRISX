@@ -81,6 +81,8 @@ class Executor {
     private:
         int parsed = 0;
         int x;
+        int serial_of_box = 0;
+        double sum_execution_time_all_box = 0;
         enum string_code {
             zero,
             one,
@@ -518,7 +520,7 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
 
         iris_graph_task(graph, task[i], iris_gpu, NULL);
     }
-    multiDeviceScheduling();
+    //multiDeviceScheduling();
     // auto start = std::chrono::high_resolution_clock::now();
     // iris_graph_submit(graph, iris_default, 1);
     // auto stop = std::chrono::high_resolution_clock::now();
@@ -549,12 +551,26 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
   if(DEBUGOUT)
     std::cout << "Executing graph" << std::endl;
 //   std::cout << "executing graph" << std::endl;
-  auto start = std::chrono::high_resolution_clock::now();
-  iris_graph_submit(graph, iris_default, 1);
-  iris_graph_wait(graph);
-  auto stop = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-//   std::cout << "The time is " << duration.count() << std::endl;
+ printf("\n\n\nBox Number = %d\n", serial_of_box++);
+
+for(int m = 0; m < 10; m++){
+    auto start = std::chrono::high_resolution_clock::now();
+    iris_graph_submit(graph, iris_default, 1);
+    iris_graph_wait(graph);
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    CPUTime = duration.count();
+    std::cout << "graph submission time: " << duration.count() << std::endl;
+    if (m == 9) sum_execution_time_all_box = duration.count() + sum_execution_time_all_box;
+    //count++;
+  }
+  std::cout << "\n\n\n Total runtime till now =" << sum_execution_time_all_box << std::endl;
+//   auto start = std::chrono::high_resolution_clock::now();
+//   iris_graph_submit(graph, iris_default, 1);
+//   iris_graph_wait(graph);
+//   auto stop = std::chrono::high_resolution_clock::now();
+//   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+//    std::cout << "The graph submission time is " << duration.count() << std::endl;
   // platform.finalize();
   return getKernelTime();
 }
@@ -683,7 +699,7 @@ void Executor::multiDeviceScheduling(){
     //int dev_map[16][16];
     int id = 0;  
 	int ntasks = iris_graph_tasks_count(graph);
-    printf(" Number of devices: %d and Number of tasks %d \n", ndevices, ntasks);
+    //printf(" Number of devices: %d and Number of tasks %d \n", ndevices, ntasks);
     iris_task *tasks = NULL;
     if (ntasks > 0)
         tasks = (iris_task *)malloc(sizeof(iris_task)*ntasks);
