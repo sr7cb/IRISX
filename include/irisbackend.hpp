@@ -35,6 +35,7 @@
 #define DEBUGOUT 0
 #endif
 
+// #define ENABLE_KERNEL_FUSION
 #define ENABLE_TASK_FUSION
 #define GRAPH_MULTIPLE_EXECUTION
 // std::string getIRISARCH() {
@@ -577,6 +578,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
   if(DEBUGOUT)
     std::cout << "Executing graph" << std::endl;
 #ifndef GRAPH_MULTIPLE_EXECUTION
+  std::cout << "hello from graph multi execution" << std::endl;
   auto start = std::chrono::high_resolution_clock::now();
   iris_graph_submit(graph, iris_default, 1);
   iris_graph_wait(graph);
@@ -759,6 +761,8 @@ void Executor::multiDeviceScheduling(){
 
 #ifndef ENABLE_TASK_FUSION
         if (((i+1) % 19) == 0) {
+#elif defined(ENABLE_KERNEL_FUSION) and not defined(ENABLE_TASK_FUSION)
+        if (((i+1) % 5) == 0) {
 #else
         if (((i+1) % 1) == 0) {
 #endif
