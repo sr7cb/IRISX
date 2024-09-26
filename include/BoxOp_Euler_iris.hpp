@@ -247,21 +247,21 @@ class BoxOp_Euler : public BoxOp<T, NUMCOMPS, 1, MEM>
         // for(int i = 0; i < 10; i++)
         //   std::cout << a_Rhs.data()[i] << std::endl;
         // // COMPUTE W_AVE
-        int n,m,k;
-        n = 64+8; //40
-        m = 64+8; //40
-        k = 5;
-        std::vector<int> sizes{(n-8)*(m-8)*(n-8)*k, n*m*n*k, 1, 1, 1, n, m};
+        // int n,m,k;
+        // n = 64+8; //40
+        // m = 64+8; //40
+        // k = 5;
+        std::vector<int> sizes{n*n*m*k, (n+8)*(n+8)*(n+8)*k, 1, 1, 1, n, m};
     
         // std::vector<void*> args{a_Rhs.data(), (void*)a_U.data(), (void*)&gamma, (void*)&a_scale, (void*)&dx};
-        args.push_back(a_Rhs.data());
-        args.push_back((void*)a_U.data());
-        args.push_back((void*)&gamma);
-        args.push_back((void*)&a_scale);
-        args.push_back((void*)&dx);
+        largs.push_back(a_Rhs.data());
+        largs.push_back((void*)a_U.data());
+        largs.push_back((void*)&gamma);
+        largs.push_back((void*)&a_scale);
+        largs.push_back((void*)&dx);
         // std::cout << "X: " << a_U.data() << std::endl; // double * a; std::cout << a;
         // std::cout << "Y: " << a_Rhs.data() << std::endl;
-        pp.setArgs(args);
+        pp.setArgs(largs);
         pp.setSizes(sizes);
         pp.createGraph();
         // pp.transform(); // goes to iris runtime and creates/executes task graph

@@ -1,12 +1,16 @@
 IRIS_PATH=${IRIS}
-PROTO_PATH=${PROTO}
+PROTO_PATH=/ccs/home/sanilrao/IPDPS24/proto
 CONSTANTS= -DDIM=2 -DHDF5=off -DPR_MPI=on
-LDFLAGS=-L$(IRIS)/lib64 -L$(IRIS)/lib -liris -lpthread -ldl
+LDFLAGS=-L$(IRIS)/lib64 -L$(IRIS)/lib -Wl,-rpath,$(IRIS)/lib64 -liris -lpthread -ldl
 MPI_COMPILE_FLAGS = $(shell mpicc --showme:compile)
 MPI_LINK_FLAGS = $(shell mpicc --showme:link)
 CFLAGS=-pg
 
 all: irisx_proto_no_mpi
+
+proto_ipdps:
+	g++ --std=c++17 -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH) -O3 -DDIM=3 -DHDF5=off -DIRIS -o proto_ipdps_dag spiral_proto_leveleuler_mpi.cpp $(LDFLAGS)
+
 
 proto_no_mpi_cuda:
 	nvcc  -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH)  -O3 -DDIM=2 -DPROTO_ACCEL -DPROTO_CUDA -DHDF5=off -DTIME -o spiral_proto_no_mpi_cuda spiral_proto_leveleuler_mpi.cpp $(LDFLAGS) 
