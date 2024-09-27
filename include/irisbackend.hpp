@@ -551,20 +551,21 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
   if(DEBUGOUT)
     std::cout << "Executing graph" << std::endl;
 //   std::cout << "executing graph" << std::endl;
- printf("\n\n\nBox Number = %d\n", serial_of_box++);
+//  printf("\n\n\nBox Number = %d\n", serial_of_box++);
 
-for(int m = 0; m < 10; m++){
+// for(int m = 0; m < 10; m++){
     auto start = std::chrono::high_resolution_clock::now();
     iris_graph_submit(graph, iris_default, 1);
     iris_graph_wait(graph);
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
     CPUTime = duration.count();
-    std::cout << "graph submission time: " << duration.count() << std::endl;
-    if (m == 9) sum_execution_time_all_box = duration.count() + sum_execution_time_all_box;
+    // std::cout << "graph submission time: " << duration.count() << std::endl;
+    // if (m == 9) 
+    sum_execution_time_all_box = duration.count() + sum_execution_time_all_box;
     //count++;
-  }
-  std::cout << "\n\n\n Total runtime till now =" << sum_execution_time_all_box << std::endl;
+//   }
+  std::cout << "Total runtime till now =" << sum_execution_time_all_box << std::endl;
 //   auto start = std::chrono::high_resolution_clock::now();
 //   iris_graph_submit(graph, iris_default, 1);
 //   iris_graph_wait(graph);

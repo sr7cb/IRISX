@@ -5,8 +5,9 @@
 #endif
 #include "Proto.H"
 #include <chrono>
-// #include "examples/_common/InputParser.H"
-#include "examples/_common/LevelRK4.H"
+#include "examples/_common/InputParser.H"
+// #include "examples/_common/LevelRK4.H"
+#include "/ccs/home/sanilrao/IPDPS24/include/LevelRK4.H"
 #if defined IRIS
 #include <iris/iris.hpp>
 #include <iris/iris_openmp.h>
@@ -17,6 +18,8 @@
 #include <include/protoeulerlib.hpp>
 #pragma GCC diagnostic pop
 ProtoProblem pp("leveleuler");
+int n,m;
+int k = 5;
 #include "include/BoxOp_Euler_iris.hpp"
 #else
 #include "include/BoxOp_Euler.hpp"
@@ -53,33 +56,6 @@ int main(int argc, char** argv)
 {
 
 
-
-#if defined IRIS
-  iris_init(&argc, &argv, 1);
-  int n,m,k;
-    n = 40;//64+8; //40
-    m = 40;//64+8; //40
-    k = 5;
-    std::vector<int> sizes{(n-8)*(m-8)*(n-8)*k, n*m*n*k, 1, 1, 1, n, m};
-    double * a = new double[n*m*n*k];
-    double * b = new double[n*m*k];
-    double c = 1.4;
-    double d =  0.00390625;
-    double e = 1.0 / 64;
-    // double c = 1;
-    // double d = 1;
-    // double e = 1;
-    std::vector<void*> args{a, b, &c, &d, &e};
-    pp.setArgs(args);
-    pp.setSizes(sizes);
-    pp.readKernels();
-    #if defined TIME 
-        //std::cout << "Hello from inner time\n";
-        auto start = std::chrono::high_resolution_clock::now();
-    #endif
-    pp.createGraph();
-#endif
-
 #if defined TIME && !defined IRIS
     std::cout << "Hello from outer time\n";
     auto start = std::chrono::high_resolution_clock::now();
@@ -103,14 +79,42 @@ int main(int argc, char** argv)
     double gamma = 1.4;
     
     // PARSE COMMAND LINE
-    // InputArgs args;
-    // args.add("domainSize",     domainSize);
-    // args.add("boxSize",        boxSize);
-    // args.add("maxTime",        maxTime);
-    // args.add("maxStep",        maxStep);
-    // args.add("outputInterval", outputInterval);
-    // args.parse(argc, argv);
-    // args.print();
+    InputArgs args;
+    args.add("domainSize",     domainSize);
+    args.add("boxSize",        boxSize);
+    args.add("maxTime",        maxTime);
+    args.add("maxStep",        maxStep);
+    args.add("outputInterval", outputInterval);
+    args.parse(argc, argv);
+    args.print();
+    n = boxSize;
+    m = boxSize; 
+
+    #if defined IRIS
+  iris_init(&argc, &argv, 1);
+//   int n,m,k;
+//     n = 40;//64+8; //40
+//     m = 40;//64+8; //40
+//     k = 5;
+    std::vector<int> sizes{(n)*(m)*(n)*k, (n+8)*(n+8)*(n+8)*k, 1, 1, 1, n, m};
+    double * a = new double[(n)*(m)*(n)*k];
+    double * b = new double[(n+8)*(n+8)*(n+8)*k];
+    double c = 1.4;
+    double d =  0.00390625;
+    double e = 1.0 / 64;
+    // double c = 1;
+    // double d = 1;
+    // double e = 1;
+    std::vector<void*> largs{a, b, &c, &d, &e};
+    pp.setArgs(largs);
+    pp.setSizes(sizes);
+    pp.readKernels();
+    #if defined TIME 
+        //std::cout << "Hello from inner time\n";
+        auto start = std::chrono::high_resolution_clock::now();
+    #endif
+    pp.createGraph();
+#endif
 
     double dx = 1.0 / domainSize;
     double dt = 0.25 / domainSize;
