@@ -36,7 +36,7 @@ if [ "$config" -eq "1" ]; then
     export IRIS_ASYNC=0
     ia=$(echo $IRIS_ASYNC)
     echo "IRIS_ASYNC is set to: $ia"
-    make="cd ../SC_IRISX/; make proto_ipdps; cd ../scripts/"
+    make="cd ../SC_IRISX/; cp ~/IPDPS24/DAG_IRISX/${box_size}x3D/kernel* .; make proto_ipdps; cd ../scripts/"
     eval $make
     command="../SC_IRISX/./proto_ipdps_sc -boxSize $box_size -domainSize $domain_size"
     echo "Executing command: $command"
@@ -61,7 +61,7 @@ elif [ "$config" -eq "2" ]; then
     export IRIS_ASYNC=1
     ia=$(echo $IRIS_ASYNC)
     echo "IRIS_ASYNC is set to: $ia"
-    make="cd ../DAG_IRISX/; make proto_ipdps; cd ../scripts/"
+    make="cd ../DAG_IRISX/; cp ~/IPDPS24/DAG_IRISX/${box_size}x3D/kernel* .; make proto_ipdps; cd ../scripts/"
     eval $make
     command="../DAG_IRISX/./proto_ipdps_dag -boxSize $box_size -domainSize $domain_size"
     echo "Executing command: $command"
@@ -86,7 +86,8 @@ elif [ "$config" -eq "3" ]; then
     export IRIS_ASYNC=0
     ia=$(echo $IRIS_ASYNC)
     echo "IRIS_ASYNC is set to: $ia"
-    make="cd ../TASK_IRISX/; make proto_ipdps; cd ../scripts/"
+    make="cd ../TASK_IRISX/; cp ~/IPDPS24/DAG_IRISX/${box_size}x3D/kernel* .; make proto_ipdps; cd ../scripts/"
+    echo $make
     eval $make
     command="../TASK_IRISX/./proto_ipdps_task -boxSize $box_size -domainSize $domain_size"
     echo "Executing command: $command"
@@ -95,7 +96,7 @@ elif [ "$config" -eq "3" ]; then
     done
 elif [ "$config" -eq "4" ]; then
     echo "Running each box serial no fusion"
-    export IRISX_HOME="/ccs/home/sanilrao/IPDPS24/SC_IRISX"
+    export IRISX_HOME="/ccs/home/sanilrao/IPDPS24/fused_SC_IRISX"
     ixh=$(echo $IRISX_HOME)
     echo "IRISX_HOME is set to: $ixh"
     export IRIS="/ccs/home/sanilrao/IPDPS24/.iris"
@@ -110,9 +111,10 @@ elif [ "$config" -eq "4" ]; then
     export IRIS_ASYNC=0
     ia=$(echo $IRIS_ASYNC)
     echo "IRIS_ASYNC is set to: $ia"
-    make="cd ../SC_IRISX/; make proto_ipdps; cd ../scripts/"
+    make="cd ../fused_SC_IRISX/; cp ~/IPDPS24/DAG_IRISX/fused_kernels/fused${box_size}x3D/kernel* .; make proto_ipdps; cd ../scripts/"
+    echo $make
     eval $make
-    command="../SC_IRISX/./proto_ipdps_sc -boxSize $box_size -domainSize $domain_size"
+    command="../fused_SC_IRISX/./proto_ipdps_sc -boxSize $box_size -domainSize $domain_size"
     echo "Executing command: $command"
     for ((i=0; i<iter; i++)); do
         eval $command > $output_file 
@@ -120,7 +122,7 @@ elif [ "$config" -eq "4" ]; then
 
 elif [ "$config" -eq "5" ]; then
     echo "Running DAG Fusion"
-    export IRISX_HOME="/ccs/home/sanilrao/IPDPS24/DAG_IRISX"
+    export IRISX_HOME="/ccs/home/sanilrao/IPDPS24/fused_DAG_IRISX"
     ixh=$(echo $IRISX_HOME)
     echo "IRISX_HOME is set to: $ixh"
     export IRIS="/ccs/home/sanilrao/IPDPS24/.iris"
@@ -135,9 +137,10 @@ elif [ "$config" -eq "5" ]; then
     export IRIS_ASYNC=1
     ia=$(echo $IRIS_ASYNC)
     echo "IRIS_ASYNC is set to: $ia"
-    make="cd ../DAG_IRISX/; make proto_ipdps; cd ../scripts/"
+    make="cd ../fused_DAG_IRISX/; cp ~/IPDPS24/DAG_IRISX/fused_kernels/fused${box_size}x3D/kernel* .; make proto_ipdps; cd ../scripts/"
+    echo $make
     eval $make
-    command="../DAG_IRISX/./proto_ipdps_dag -boxSize $box_size -domainSize $domain_size"
+    command="../fused_DAG_IRISX/./proto_ipdps_dag_fused -boxSize $box_size -domainSize $domain_size"
     echo "Executing command: $command"
     for ((i=0; i<iter; i++)); do
         eval $command > $output_file
@@ -145,7 +148,7 @@ elif [ "$config" -eq "5" ]; then
 
 elif [ "$config" -eq "6" ]; then
     echo "Running DAG Fusion + Task Fusion"
-    export IRISX_HOME="/ccs/home/sanilrao/IPDPS24/TASK_IRISX"
+    export IRISX_HOME="/ccs/home/sanilrao/IPDPS24/fused_TASK_IRISX"
     ixh=$(echo $IRISX_HOME)
     echo "IRISX_HOME is set to: $ixh"
     export IRIS="/ccs/home/sanilrao/IPDPS24/.schedule_iris"
@@ -160,9 +163,10 @@ elif [ "$config" -eq "6" ]; then
     export IRIS_ASYNC=0
     ia=$(echo $IRIS_ASYNC)
     echo "IRIS_ASYNC is set to: $ia"
-    make="cd ../TASK_IRISX/; make proto_ipdps; cd ../scripts/"
+    make="cd ../fused_TASK_IRISX/; cp ~/IPDPS24/DAG_IRISX/fused_kernels/fused${box_size}x3D/kernel* .; make proto_ipdps; cd ../scripts/"
+    echo $make
     eval $make
-    command="../TASK_IRISX/./proto_ipdps_task -boxSize $box_size -domainSize $domain_size"
+    command="../fused_TASK_IRISX/./proto_ipdps_task -boxSize $box_size -domainSize $domain_size"
     echo "Executing command: $command"
     for ((i=0; i<iter; i++)); do
         eval $command > $output_file
