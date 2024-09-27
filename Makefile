@@ -6,7 +6,7 @@ MPI_COMPILE_FLAGS = $(shell mpicc --showme:compile)
 MPI_LINK_FLAGS = $(shell mpicc --showme:link)
 CFLAGS=-pg
 
-all: irisx_proto_no_mpi
+all: proto_ipdps
 
 proto_ipdps:
 	g++ --std=c++17 -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH) -O3 -DDIM=3 -DHDF5=off -DIRIS -o proto_ipdps_dag spiral_proto_leveleuler_mpi.cpp $(LDFLAGS)
