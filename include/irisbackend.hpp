@@ -740,7 +740,7 @@ void Executor::multiDeviceScheduling(){
     //int dev_map[16][16];
     int id = 0;  
 	int ntasks = iris_graph_tasks_count(graph);
-    //printf(" Number of devices: %d and Number of tasks %d \n", ndevices, ntasks);
+    // printf(" Number of devices: %d and Number of tasks %d \n", ndevices, ntasks);
     iris_task *tasks = NULL;
     if (ntasks > 0)
         tasks = (iris_task *)malloc(sizeof(iris_task)*ntasks);
@@ -759,14 +759,14 @@ void Executor::multiDeviceScheduling(){
         */
         iris_task_set_policy(task, id);
 
-#ifndef ENABLE_TASK_FUSION
+#if !defined(ENABLE_TASK_FUSION) && !defined(ENABLE_KERNEL_FUSION)
         if (((i+1) % 19) == 0) {
-#elif defined(ENABLE_KERNEL_FUSION) and not defined(ENABLE_TASK_FUSION)
+#elif defined(ENABLE_KERNEL_FUSION) && !defined(ENABLE_TASK_FUSION)
         if (((i+1) % 5) == 0) {
 #else
         if (((i+1) % 1) == 0) {
 #endif
- 
+            std::cout << (i+1)%5 << " " << id << std::endl;
             id = id + 1;
             if (id == ndevices) id = 0;
         }
