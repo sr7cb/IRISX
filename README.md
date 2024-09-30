@@ -1,11 +1,20 @@
-# FFTX_IRIS
+# IRISX
 
-This is a prototype of integrating the FFTX Project with the IRIS runtime system
+This repo introduces IRISX a dynamic system integrating the SPIRAL code generation system with the IRIS runtime system.
 
 # Requirements 
-To use this repo you need to follow the instructions for building the FFTX project, specifically the develop branch
+This project requires SPIRAL and a few of its packages:
 
-https://github.com/spiral-software/fftx
+SPIRAL:
+
+https://github.com/spiral-software/spiral-software
+
+Packages: To be placed in the namespaces/packages folder in your spiral directory
+
+https://github.com/spiral-software/spiral-package-fftx
+
+https://github.com/spiral-software/spiral-package-jit
+
 
 You also need to build the iris project 
 
