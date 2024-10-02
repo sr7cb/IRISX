@@ -46,13 +46,12 @@ JIT BEGIN
 4 a_scale1 double
 4 dx1 double
 ------------------
-#include "hip/hip_runtime.h"
 
-extern "C" __global__ void ker_code0(double *X, double gamma1, double *P1) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2515456))) {
+kernel void ker_code0(global double *X, double gamma1, global double *P1) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2515456))) {
         double a427, a428, s28, s29, s30;
         int a422, a423, a424, a425, a426;
-        a422 = (threadIdx.x + (256*blockIdx.x));
+        a422 = (get_local_id(0) + (256*get_group_id(0)));
         s28 = X[a422];
         P1[a422] = s28;
         a423 = (a422 + 2515456);
@@ -70,13 +69,13 @@ extern "C" __global__ void ker_code0(double *X, double gamma1, double *P1) {
     }
 }
 
-extern "C" __global__ void ker_code1(double *X, double gamma1, double *P4) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2406104))) {
+kernel void ker_code1(global double *X, double gamma1, global double *P4) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2406104))) {
         double a796, a797, s132, s133, s134, s135, s136, s137, 
                 s138, t156;
         int a795, b101;
-        a795 = ((256*blockIdx.x) + threadIdx.x);
-        b101 = ((136*(a795 / 134)) + (((122*blockIdx.x) + threadIdx.x) % 134));
+        a795 = ((256*get_group_id(0)) + get_local_id(0));
+        b101 = ((136*(a795 / 134)) + (((122*get_group_id(0)) + get_local_id(0)) % 134));
         s132 = X[(b101 + 18769)];
         t156 = (s132 - (0.041666666666666664*((X[(b101 + 137)] - (6.0*X[(b101 + 18633)])) + X[(b101 + 18497)] + X[(b101 + 18632)] + X[(b101 + 18634)] + s132 + X[(b101 + 37129)])));
         s133 = X[(b101 + 2534225)];
@@ -95,11 +94,11 @@ extern "C" __global__ void ker_code1(double *X, double gamma1, double *P4) {
     }
 }
 
-extern "C" __global__ void ker_code2(double *P4, double *P1, double *P2) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2406104))) {
+kernel void ker_code2(global double *P4, global double *P1, global double *P2) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2406104))) {
         int a1165, b198;
-        a1165 = ((256*blockIdx.x) + threadIdx.x);
-        b198 = ((136*(a1165 / 134)) + (((122*blockIdx.x) + threadIdx.x) % 134));
+        a1165 = ((256*get_group_id(0)) + get_local_id(0));
+        b198 = ((136*(a1165 / 134)) + (((122*get_group_id(0)) + get_local_id(0)) % 134));
         P2[a1165] = ((0.041666666666666664*((P1[(b198 + 137)] - (6.0*P1[(b198 + 18633)])) + P1[(b198 + 18497)] + P1[(b198 + 18632)] + P1[(b198 + 18634)] + P1[(b198 + 18769)] + P1[(b198 + 37129)])) + P4[(a1165)]);
         P2[(a1165 + 2406104)] = ((0.041666666666666664*((P1[(b198 + 2515593)] - (6.0*P1[(b198 + 2534089)])) + P1[(b198 + 2533953)] + P1[(b198 + 2534088)] + P1[(b198 + 2534090)] + P1[(b198 + 2534225)] + P1[(b198 + 2552585)])) + P4[(a1165 + 2406104)]);
         P2[(a1165 + 4812208)] = ((0.041666666666666664*((P1[(b198 + 5031049)] - (6.0*P1[(b198 + 5049545)])) + P1[(b198 + 5049409)] + P1[(b198 + 5049544)] + P1[(b198 + 5049546)] + P1[(b198 + 5049681)] + P1[(b198 + 5068041)])) + P4[(a1165 + 2406104*2)]);
@@ -108,8 +107,8 @@ extern "C" __global__ void ker_code2(double *P4, double *P1, double *P2) {
     }
 }
 
-extern "C" __global__ void ker_code3(double gamma1, double *P1, double *P2) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2352236))) {
+kernel void ker_code3(double gamma1, global double *P1, global double *P2) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2352236))) {
         double s312, s313, s314, s315, s316, s317, s318, s319, 
                 s320, s321, s322, s323, s324, s325, t213, t214, 
                 t215, t216, t217, t218, t219, t220, t221, t222, 
@@ -119,8 +118,8 @@ extern "C" __global__ void ker_code3(double gamma1, double *P1, double *P2) {
                 a1485, a1486, a1487, a1488, a1489, a1490, a1491, a1492, 
                 a1493, a1494, a1495, a1496, a1497, a1498, a1499, a1500, 
                 a1501, a1502;
-        a1485 = ((256*blockIdx.x) + threadIdx.x);
-        a1486 = ((134*(a1485 / 134)) + (((122*blockIdx.x) + threadIdx.x) % 134));
+        a1485 = ((256*get_group_id(0)) + get_local_id(0));
+        a1486 = ((134*(a1485 / 134)) + (((122*get_group_id(0)) + get_local_id(0)) % 134));
         t217 = (0.5*((((0.58333333333333337*P2[(a1486 + 2406105)]) - (0.083333333333333329*P2[(a1486 + 2406104)])) + (0.58333333333333337*P2[(a1486 + 2406106)])) - (0.083333333333333329*P2[(a1486 + 2406107)])));
         t218 = (0.5*((((0.58333333333333337*P2[(a1486 + 9624417)]) - (0.083333333333333329*P2[(a1486 + 9624416)])) + (0.58333333333333337*P2[(a1486 + 9624418)])) - (0.083333333333333329*P2[(a1486 + 9624419)])));
         t219 = (0.5*((((0.58333333333333337*P2[(a1486 + 1)]) - (0.083333333333333329*P2[a1486])) + (0.58333333333333337*P2[(a1486 + 2)])) - (0.083333333333333329*P2[(a1486 + 3)])));
@@ -186,11 +185,11 @@ extern "C" __global__ void ker_code3(double gamma1, double *P1, double *P2) {
     }
 }
 
-extern "C" __global__ void ker_code4(double gamma1, double *P1, double *P3) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2352236))) {
+kernel void ker_code4(double gamma1, global double *P1, global double *P3) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2352236))) {
         double s361, s362, s363, s364, s365;
         int a1544, a1545, a1546, a1547, a1548;
-        a1544 = ((256*blockIdx.x) + threadIdx.x);
+        a1544 = ((256*get_group_id(0)) + get_local_id(0));
         a1545 = (a1544 + 2352236);
         s361 = P1[a1545];
         s362 = (P1[a1544]*s361);
@@ -208,13 +207,12 @@ extern "C" __global__ void ker_code4(double gamma1, double *P1, double *P3) {
     }
 }
 
-//mark
-extern "C" __global__ void ker_code5(double gamma1, double *P5, double *P1) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2282544))) {
+kernel void ker_code5(double gamma1, global double *P5, global double *P1) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2282544))) {
         double s458, t266, t267, t268, t269;
         int a1900, b331, b332;
-        a1900 = ((256*blockIdx.x) + threadIdx.x);
-        b331 = ((131*(a1900 / 131)) + (((125*blockIdx.x) + threadIdx.x) % 131));
+        a1900 = ((256*get_group_id(0)) + get_local_id(0));
+        b331 = ((131*(a1900 / 131)) + (((125*get_group_id(0)) + get_local_id(0)) % 131));
         b332 = ((b331 % 17292) + (17554*(a1900 / 17292)));
         t266 = (P1[(b332 + 2369921)] - (0.041666666666666664*((P1[(b331 + 2352367)] - (4.0*P1[(b331 + 2369921)])) + P1[(b331 + 2369790)] + P1[(b331 + 2370052)] + P1[(b331 + 2387475)])));
         t267 = (P1[(b332 + 4722157)] - (0.041666666666666664*((P1[(b331 + 4704603)] - (4.0*P1[(b331 + 4722157)])) + P1[(b331 + 4722026)] + P1[(b331 + 4722288)] + P1[(b331 + 4739711)])));
@@ -229,11 +227,11 @@ extern "C" __global__ void ker_code5(double gamma1, double *P5, double *P1) {
     }
 }
 
-extern "C" __global__ void ker_code6(double *P5, double *P1, double *P3) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2282544))) {
+kernel void ker_code6(global double *P5, global double *P1, global double *P3) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2282544))) {
         int a2178, b400;
-        a2178 = ((256*blockIdx.x) + threadIdx.x);
-        b400 = ((131*(a2178 / 131)) + (((125*blockIdx.x) + threadIdx.x) % 131));
+        a2178 = ((256*get_group_id(0)) + get_local_id(0));
+        b400 = ((131*(a2178 / 131)) + (((125*get_group_id(0)) + get_local_id(0)) % 131));
         P1[a2178] = ((0.041666666666666664*((P3[(b400 + 131)] - (4.0*P3[(b400 + 17685)])) + P3[(b400 + 17554)] + P3[(b400 + 17816)] + P3[(b400 + 35239)])) + P5[(a2178)]);
         P1[(a2178 + 2282544)] = ((0.041666666666666664*((P3[(b400 + 2352367)] - (4.0*P3[(b400 + 2369921)])) + P3[(b400 + 2369790)] + P3[(b400 + 2370052)] + P3[(b400 + 2387475)])) + P5[(a2178 + 2282544)]);
         P1[(a2178 + 4565088)] = ((0.041666666666666664*((P3[(b400 + 4704603)] - (4.0*P3[(b400 + 4722157)])) + P3[(b400 + 4722026)] + P3[(b400 + 4722288)] + P3[(b400 + 4739711)])) + P5[(a2178 + 2282544*2)]);
@@ -242,11 +240,11 @@ extern "C" __global__ void ker_code6(double *P5, double *P1, double *P3) {
     }
 }
 
-extern "C" __global__ void ker_code7(double *P1, double *P3) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2097152))) {
+kernel void ker_code7(global double *P1, global double *P3) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2097152))) {
         int a2333, b417;
-        a2333 = (threadIdx.x + (256*blockIdx.x));
-        b417 = ((((131*(a2333 / 128)) + (threadIdx.x % 128)) % 16768) + (17292*(a2333 / 16384)));
+        a2333 = (get_local_id(0) + (256*get_group_id(0)));
+        b417 = ((((131*(a2333 / 128)) + (get_local_id(0) % 128)) % 16768) + (17292*(a2333 / 16384)));
         P3[a2333] = (P1[(b417 + 34848)] - P1[(b417 + 34847)]);
         P3[(a2333 + 2097152)] = (P1[(b417 + 2317392)] - P1[(b417 + 2317391)]);
         P3[(a2333 + 4194304)] = (P1[(b417 + 4599936)] - P1[(b417 + 4599935)]);
@@ -255,8 +253,8 @@ extern "C" __global__ void ker_code7(double *P1, double *P3) {
     }
 }
 
-extern "C" __global__ void ker_code8(double gamma1, double *P8, double *P2) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2352236))) {
+kernel void ker_code8(double gamma1, global double *P8, global double *P2) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2352236))) {
         double s642, s643, s644, s645, s646, s647, s648, s649, 
                 s650, s651, s652, s653, s654, s655, t326, t327, 
                 t328, t329, t330, t331, t332, t333, t334, t335, 
@@ -266,7 +264,7 @@ extern "C" __global__ void ker_code8(double gamma1, double *P8, double *P2) {
                 a2526, a2527, a2528, a2529, a2530, a2531, a2532, a2533, 
                 a2534, a2535, a2536, a2537, a2538, a2539, a2540, a2541, 
                 a2542;
-        a2526 = ((256*blockIdx.x) + threadIdx.x);
+        a2526 = ((256*get_group_id(0)) + get_local_id(0));
         t330 = (0.5*((((0.58333333333333337*P2[(a2526 + 4812342)]) - (0.083333333333333329*P2[(a2526 + 4812208)])) + (0.58333333333333337*P2[(a2526 + 4812476)])) - (0.083333333333333329*P2[(a2526 + 4812610)])));
         t331 = (0.5*((((0.58333333333333337*P2[(a2526 + 9624550)]) - (0.083333333333333329*P2[(a2526 + 9624416)])) + (0.58333333333333337*P2[(a2526 + 9624684)])) - (0.083333333333333329*P2[(a2526 + 9624818)])));
         t332 = (0.5*((((0.58333333333333337*P2[(a2526 + 134)]) - (0.083333333333333329*P2[a2526])) + (0.58333333333333337*P2[(a2526 + 268)])) - (0.083333333333333329*P2[(a2526 + 402)])));
@@ -332,11 +330,11 @@ extern "C" __global__ void ker_code8(double gamma1, double *P8, double *P2) {
     }
 }
 
-extern "C" __global__ void ker_code9(double gamma1, double *P10, double *P8) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2352236))) {
+kernel void ker_code9(double gamma1, global double *P10, global double *P8) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2352236))) {
         double s691, s692, s693, s694, s695;
         int a2584, a2585, a2586, a2587, a2588;
-        a2584 = ((256*blockIdx.x) + threadIdx.x);
+        a2584 = ((256*get_group_id(0)) + get_local_id(0));
         a2585 = (a2584 + 4704472);
         s691 = P8[a2585];
         s692 = (P8[a2584]*s691);
@@ -353,13 +351,13 @@ extern "C" __global__ void ker_code9(double gamma1, double *P10, double *P8) {
         P10[a2587] = -((((gamma1 / (gamma1 - 1.0))*(s691*s694)) + (s692*(((0.5*s693)*s693) + ((0.5*s691)*s691) + ((0.5*s695)*s695)))));
     }
 }
-//mark
-extern "C" __global__ void ker_code10(double gamma1, double *P8, double *P6) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2282544))) {
+
+kernel void ker_code10(double gamma1, global double *P8, global double *P6) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2282544))) {
         double s787, t379, t380, t381, t382;
         int a2940, b550, b551;
-        a2940 = ((256*blockIdx.x) + threadIdx.x);
-        b550 = ((134*(a2940 / 132)) + (((124*blockIdx.x) + threadIdx.x) % 132));
+        a2940 = ((256*get_group_id(0)) + get_local_id(0));
+        b550 = ((134*(a2940 / 132)) + (((124*get_group_id(0)) + get_local_id(0)) % 132));
         b551 = ((b550 % 17554) + (17554*(a2940 / 17554)));
         t379 = (P8[(b551 + 2369791)] - (0.041666666666666664*((P8[(b550 + 2352237)] - (4.0*P8[(b550 + 2369791)])) + P8[(b550 + 2369790)] + P8[(b550 + 2369792)] + P8[(b550 + 2387345)])));
         t380 = (P8[(b551 + 4722027)] - (0.041666666666666664*((P8[(b550 + 4704473)] - (4.0*P8[(b550 + 4722027)])) + P8[(b550 + 4722026)] + P8[(b550 + 4722028)] + P8[(b550 + 4739581)])));
@@ -374,11 +372,11 @@ extern "C" __global__ void ker_code10(double gamma1, double *P8, double *P6) {
     }
 }
 
-extern "C" __global__ void ker_code11(double *P10, double *P8, double *P6) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2282544))) {
+kernel void ker_code11(global double *P10, global double *P8, global double *P6) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2282544))) {
         int a3218, b618;
-        a3218 = ((256*blockIdx.x) + threadIdx.x);
-        b618 = ((134*(a3218 / 132)) + (((124*blockIdx.x) + threadIdx.x) % 132));
+        a3218 = ((256*get_group_id(0)) + get_local_id(0));
+        b618 = ((134*(a3218 / 132)) + (((124*get_group_id(0)) + get_local_id(0)) % 132));
         P8[a3218] = ((0.041666666666666664*((P10[(b618 + 1)] - (4.0*P10[(b618 + 17555)])) + P10[(b618 + 17554)] + P10[(b618 + 17556)] + P10[(b618 + 35109)])) + P6[(a3218)]);
         P8[(a3218 + 2282544)] = ((0.041666666666666664*((P10[(b618 + 2352237)] - (4.0*P10[(b618 + 2369791)])) + P10[(b618 + 2369790)] + P10[(b618 + 2369792)] + P10[(b618 + 2387345)])) + P6[(a3218 + 2282544)]);
         P8[(a3218 + 4565088)] = ((0.041666666666666664*((P10[(b618 + 4704473)] - (4.0*P10[(b618 + 4722027)])) + P10[(b618 + 4722026)] + P10[(b618 + 4722028)] + P10[(b618 + 4739581)])) + P6[(a3218 + 2282544*2)]);
@@ -387,11 +385,11 @@ extern "C" __global__ void ker_code11(double *P10, double *P8, double *P6) {
     }
 }
 
-extern "C" __global__ void ker_code12(double *P10, double *P8) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2097152))) {
+kernel void ker_code12(global double *P10, global double *P8) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2097152))) {
         int a3374, b636;
-        a3374 = (threadIdx.x + (256*blockIdx.x));
-        b636 = ((((132*(a3374 / 128)) + (threadIdx.x % 128)) % 16896) + (17292*(a3374 / 16384)));
+        a3374 = (get_local_id(0) + (256*get_group_id(0)));
+        b636 = ((((132*(a3374 / 128)) + (get_local_id(0) % 128)) % 16896) + (17292*(a3374 / 16384)));
         P10[(a3374)] = (P8[(b636 + 34980)] - P8[(b636 + 34848)]);
         P10[(a3374 + 2097152)] = (P8[(b636 + 2317524)] - P8[(b636 + 2317392)]);
         P10[(a3374 + 2097152*2)] = (P8[(b636 + 4600068)] - P8[(b636 + 4599936)]);
@@ -400,8 +398,8 @@ extern "C" __global__ void ker_code12(double *P10, double *P8) {
     }
 }
 
-extern "C" __global__ void ker_code13(double gamma1, double *P9, double *P2) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2352236))) {
+kernel void ker_code13(double gamma1, global double *P9, global double *P2) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2352236))) {
         double s971, s972, s973, s974, s975, s976, s977, s978, 
                 s979, s980, s981, s982, s983, s984, t440, t441, 
                 t442, t443, t444, t445, t446, t447, t448, t449, 
@@ -411,7 +409,7 @@ extern "C" __global__ void ker_code13(double gamma1, double *P9, double *P2) {
                 a3567, a3568, a3569, a3570, a3571, a3572, a3573, a3574, 
                 a3575, a3576, a3577, a3578, a3579, a3580, a3581, a3582, 
                 a3583;
-        a3567 = ((256*blockIdx.x) + threadIdx.x);
+        a3567 = ((256*get_group_id(0)) + get_local_id(0));
         t444 = (0.5*((((0.58333333333333337*P2[(a3567 + 7236268)]) - (0.083333333333333329*P2[(a3567 + 7218312)])) + (0.58333333333333337*P2[(a3567 + 7254224)])) - (0.083333333333333329*P2[(a3567 + 7272180)])));
         t445 = (0.5*((((0.58333333333333337*P2[(a3567 + 9642372)]) - (0.083333333333333329*P2[(a3567 + 9624416)])) + (0.58333333333333337*P2[(a3567 + 9660328)])) - (0.083333333333333329*P2[(a3567 + 9678284)])));
         t446 = (0.5*((((0.58333333333333337*P2[(a3567 + 17956)]) - (0.083333333333333329*P2[a3567])) + (0.58333333333333337*P2[(a3567 + 35912)])) - (0.083333333333333329*P2[(a3567 + 53868)])));
@@ -477,11 +475,11 @@ extern "C" __global__ void ker_code13(double gamma1, double *P9, double *P2) {
     }
 }
 
-extern "C" __global__ void ker_code14(double gamma1, double *P11, double *P9) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2352236))) {
+kernel void ker_code14(double gamma1, global double *P11, global double *P9) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2352236))) {
         double s1020, s1021, s1022, s1023, s1024;
         int a3625, a3626, a3627, a3628, a3629;
-        a3625 = ((256*blockIdx.x) + threadIdx.x);
+        a3625 = ((256*get_group_id(0)) + get_local_id(0));
         a3626 = (a3625 + 7056708);
         s1020 = P9[a3626];
         s1021 = (P9[a3625]*s1020);
@@ -499,13 +497,12 @@ extern "C" __global__ void ker_code14(double gamma1, double *P11, double *P9) {
     }
 }
 
-//mark
-extern "C" __global__ void ker_code15(double gamma1, double *P9, double *P7) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2282544))) {
+kernel void ker_code15(double gamma1, global double *P9, global double *P7) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2282544))) {
         double s1116, t493, t494, t495, t496;
         int a3981, b769, b770;
-        a3981 = ((256*blockIdx.x) + threadIdx.x);
-        b769 = ((134*(a3981 / 132)) + (((124*blockIdx.x) + threadIdx.x) % 132));
+        a3981 = ((256*get_group_id(0)) + get_local_id(0));
+        b769 = ((134*(a3981 / 132)) + (((124*get_group_id(0)) + get_local_id(0)) % 132));
         b770 = ((b769 % 17688) + (17956*(a3981 / 17424)));
         t493 = (P9[(b770 + 2352371)] - (0.041666666666666664*((P9[(b769 + 2352237)] - (4.0*P9[(b769 + 2352371)])) + P9[(b769 + 2352370)] + P9[(b769 + 2352372)] + P9[(b769 + 2352505)])));
         t494 = (P9[(b770 + 4704607)] - (0.041666666666666664*((P9[(b769 + 4704473)] - (4.0*P9[(b769 + 4704607)])) + P9[(b769 + 4704606)] + P9[(b769 + 4704608)] + P9[(b769 + 4704741)])));
@@ -513,18 +510,18 @@ extern "C" __global__ void ker_code15(double gamma1, double *P9, double *P7) {
         t496 = (P9[(b770 + 9409079)] - (0.041666666666666664*((P9[(b769 + 9408945)] - (4.0*P9[(b769 + 9409079)])) + P9[(b769 + 9409078)] + P9[(b769 + 9409080)] + P9[(b769 + 9409213)])));
         s1116 = ((P9[(b770 + 135)] - (0.041666666666666664*((P9[(b769 + 1)] - (4.0*P9[(b769 + 135)])) + P9[(b769 + 134)] + P9[(b769 + 136)] + P9[(b769 + 269)])))*t495);
         P7[(a3981)] = -(s1116);
-        P7[(a3981+2282544)] = -((s1116*t493));
+        P7[(a3981 + 2282544)] = -((s1116*t493));
         P7[(a3981 + 2282544*2)] = -((s1116*t494));
         P7[(a3981 + 2282544*3)] = -(((s1116*t495) + t496));
         P7[(a3981 + 2282544*4)] = -((((gamma1 / (gamma1 - 1.0))*(t495*t496)) + (s1116*(((0.5*t493)*t493) + ((0.5*t494)*t494) + ((0.5*t495)*t495)))));
     }
 }
 
-extern "C" __global__ void ker_code16(double *P11, double *P9, double *P7) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2282544))) {
+kernel void ker_code16(global double *P11, global double *P9, global double *P7) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2282544))) {
         int a4259, b837;
-        a4259 = ((256*blockIdx.x) + threadIdx.x);
-        b837 = ((134*(a4259 / 132)) + (((124*blockIdx.x) + threadIdx.x) % 132));
+        a4259 = ((256*get_group_id(0)) + get_local_id(0));
+        b837 = ((134*(a4259 / 132)) + (((124*get_group_id(0)) + get_local_id(0)) % 132));
         P9[a4259] = ((0.041666666666666664*((P11[(b837 + 1)] - (4.0*P11[(b837 + 135)])) + P11[(b837 + 134)] + P11[(b837 + 136)] + P11[(b837 + 269)])) + P7[(a4259)]);
         P9[(a4259 + 2282544)] = ((0.041666666666666664*((P11[(b837 + 2352237)] - (4.0*P11[(b837 + 2352371)])) + P11[(b837 + 2352370)] + P11[(b837 + 2352372)] + P11[(b837 + 2352505)])) + P7[(a4259 + 2282544)]);
         P9[(a4259 + 4565088)] = ((0.041666666666666664*((P11[(b837 + 4704473)] - (4.0*P11[(b837 + 4704607)])) + P11[(b837 + 4704606)] + P11[(b837 + 4704608)] + P11[(b837 + 4704741)])) + P7[(a4259 + 2282544*2)]);
@@ -533,11 +530,11 @@ extern "C" __global__ void ker_code16(double *P11, double *P9, double *P7) {
     }
 }
 
-extern "C" __global__ void ker_code17(double *P11, double *P9) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2097152))) {
+kernel void ker_code17(global double *P11, global double *P9) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2097152))) {
         int a4415, b855;
-        a4415 = (threadIdx.x + (256*blockIdx.x));
-        b855 = ((((132*(a4415 / 128)) + (threadIdx.x % 128)) % 16896) + (17424*(a4415 / 16384)));
+        a4415 = (get_local_id(0) + (256*get_group_id(0)));
+        b855 = ((((132*(a4415 / 128)) + (get_local_id(0) % 128)) % 16896) + (17424*(a4415 / 16384)));
         P11[(a4415)] = (P9[(b855 + 52536)] - P9[(b855 + 35112)]);
         P11[(a4415 + 2097152)] = (P9[(b855 + 2335080)] - P9[(b855 + 2317656)]);
         P11[(a4415 + 2097152*2)] = (P9[(b855 + 4617624)] - P9[(b855 + 4600200)]);
@@ -546,11 +543,11 @@ extern "C" __global__ void ker_code17(double *P11, double *P9) {
     }
 }
 
-extern "C" __global__ void ker_code18(double *Y, double a_scale1, double dx1, double *P11, double *P10, double *P3) {
-    if (((((256*blockIdx.x) + threadIdx.x) < 2097152))) {
+kernel void ker_code18(global double *Y, double a_scale1, double dx1, global double *P11, global double *P10, global double *P3) {
+    if (((((256*get_group_id(0)) + get_local_id(0)) < 2097152))) {
         double a4485;
         int a4484, a4486, a4487, a4488, a4489;
-        a4484 = (threadIdx.x + (256*blockIdx.x));
+        a4484 = (get_local_id(0) + (256*get_group_id(0)));
         a4485 = (a_scale1 / dx1);
         Y[a4484] = (a4485*(P3[a4484] + P10[(a4484)] + P11[(a4484)]));
         a4486 = (a4484 + 2097152);
