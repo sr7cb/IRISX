@@ -26,6 +26,7 @@
 #include <array>
 #include <chrono>
 #include <bits/stdc++.h>
+#include <algorithm>
 #include "irisbackend.hpp"
 
 #pragma once
@@ -146,7 +147,9 @@ void printIRISBackend(std::string name, std::vector<int> sizes, std::string arch
 
 class FFTXProblem {
 public:
-    Executor e;
+    std::vector<Executor> e(3);//vector of possible configurations  kernel x serial x dag x task 
+    int selected = 0;
+    bool autotune = true;
     bool gen_executor = false;
     std::vector<void*> args;
     std::vector<int> sizes;
@@ -189,6 +192,7 @@ public:
     void readKernels();
     void createGraph();
     void resetInput();
+    void autotune();
     std::string semantics2(std::string arch);
     virtual void randomProblemInstance() = 0;
     virtual void semantics(std::string arch) = 0;
@@ -309,20 +313,60 @@ std::string FFTXProblem::semantics2(std::string arch) {
     // return "cuda";
 }
 
+//going through DAG configurations only atm
+void FFTXProblem::autotune() {
+  std::vector<float> time; 
+  for(int i = 0; i < e.size(); i++) {
+    time.push_back(e.initAndLaunch());
+  }
+  auto minElement = std::min_element(time.begin(), time.end());
+  // Check if the vector is not empty
+  if (minElement != time.end()) {
+      // Get the index of the minimum element
+      selected = std::distance(time.begin(), minElement);
+      if(DEBUGOUT){
+        std::cout << "The index of the minimum value is: " << index << std::endl;
+        std::cout << "The minimum value is: " << *minElement << std::endl;
+      }
+  } else {
+      if(DEBUGOUT) {
+        std::cout << "The list is empty." << std::endl;
+      }
+  }
+  autotune = false;
+}
+
 
 void FFTXProblem::resetInput() {
-  e.resetNumberParams();
+  if(autotune) {
+    for(int i = 0; i < e.size(); i++)
+      e[i].resetNumberParams();
+  } else
+      e[0].resetNumberParams();
 }
 
 void FFTXProblem::createGraph() {
   if(!dont_append) {
     if(!initialized_graph) {
-        e.createGraph(args, sizes, name, initialized_graph);
-        initialized_graph = true;
+      if(autotune){
+        for(int i = 0; i < e.size(); i++)
+          e[i].createGraph(args, sizes, name, initialized_graph);
+      } else 
+          e[0].createGraph(args, sizes, name, initialized_graph);
+      initialized_graph = true;
+    } else{
+      if(autotune){
+        for(int i = 0; i< e.size(); i++)
+          e[i].createGraph(args, sizes, name, initialized_graph);
+      } else
+          e[0].createGraph(args, sizes, name, initialized_graph);
+    }
+    if(autotune){
+      for(int i = 0; i < e.size(); i++)
+        e[i].retainGraph();
     } else
-        e.createGraph(args, sizes, name, initialized_graph);
+        e[0].retainGraph();
 
-    e.retainGraph();
     if(!gen_executor)
         gen_executor = true;
   }
@@ -365,7 +409,19 @@ void FFTXProblem::readKernels(){
                   res = semantics2(word);
           }
       }
-      e.execute();
+      if(autotune) {
+        std::string file_name = getIRISX().append("/config.txt");
+        std::ifstream ifs ( file_name );
+        if(ifs) {
+          autotune = false;
+          e[0].setup(true, true, true);
+        }
+      }
+      if(autotune) {
+        for(int i = 0; i < e.size(); i++)
+          e[i].execute();
+      } else
+        e[0].execute();
   }
 }
 
@@ -384,7 +440,10 @@ void FFTXProblem::transform(){
 }
 
 void FFTXProblem::run() {
-  gpuTime = e.initAndLaunch(args, sizes, name);
+  if(autotune){
+    autotune();
+  }
+  gpuTime = e[selected].initAndLaunch(args, sizes, name);
 }
 
 float FFTXProblem::getTime() {
