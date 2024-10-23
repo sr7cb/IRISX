@@ -36,8 +36,8 @@
 #endif
 
 // #define ENABLE_KERNEL_FUSION
-#define ENABLE_TASK_FUSION
-#define GRAPH_MULTIPLE_EXECUTION
+// #define ENABLE_TASK_FUSION
+// #define GRAPH_MULTIPLE_EXECUTION
 // std::string getIRISARCH() {
 //     const char * tmp2 = std::getenv("IRIS_ARCHS");
 //     std::string tmp(tmp2 ? tmp2 : "");
@@ -94,6 +94,11 @@ class Executor {
             pointer_double,
             mone
         };
+        /*Configuration Variables*/
+        int fusion_level = 0;
+        bool dag_fusion = false;
+        bool task_fusion = false;
+
         /*Metadata variables*/
         std::vector<std::tuple<std::string, int, std::string>> device_names;
         std::vector<std::string> kernel_names;
@@ -113,23 +118,27 @@ class Executor {
         std::vector<void *> data;
         std::vector<int> data_lengths;
         int graph_created = 0;
-        iris_graph graph;
+        std::vector<iris_graph> graphs;
         int number_params = 0;
 
         /*Exeuction time in ms*/
         float CPUTime;
     public:
+        // Executor(int fl, bool dag_f, bool task_f) : fusion_level(fl), dag_fusion(dag_f), task_fusion(task_f) {}
         string_code hashit(std::string const& inString); /*get data type function*/
         float initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, std::string name);/*Execute IRISX task graph*/
         void execute();/*IRIS_ARCHS parser for compilation*/
         void execute2(std::string file_name, std::string arch);/*Backend compiler invocation*/
         float getKernelTime();/*Return runtime*/
         int parseDataStructure(std::string input);/*Metadata parser function*/
-        void multiDeviceScheduling();/*IRISX custom scheduling policy*/
+        void multiDeviceScheduling(iris_graph graph);/*IRISX custom scheduling policy*/
         void createGraph(std::vector<void*>& args, std::vector<int> sizes, std::string name, bool iris_graph_created);/*IRISX task graph creation*/
         void retainGraph();/*IRISX graph rentention*/
         int getGraphCreated();/*graph creation verification function*/
         void resetNumberParams();/*backend host pointer reset*/
+        void setup(bool dag_f, bool task_f); /*configuration initialization*/
+        bool getDagFusion(); //get dag fusion value
+        bool getTaskFusion();//get task fusion value
 };
 
 /*get data type function*/
@@ -289,6 +298,11 @@ int Executor::parseDataStructure(std::string input) {
     }
     if ( DEBUGOUT ) std::cout << "parsed input\n";
     return 1;
+}
+
+void Executor::setup(bool dag_f, bool task_f){
+  dag_fusion = dag_f;
+  task_fusion = task_f;
 }
 
 /*IRISX task graph creation*/
@@ -459,102 +473,143 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
       std::cout << std::endl;
     }
 
-    if(!iris_graph_created)
+    iris_graph graph; //local graph object
+    if(!iris_graph_created && dag_fusion) { //only create 1 graph if dag_fusion
       iris_graph_create(&graph);
-
-#ifndef ENABLE_TASK_FUSION
-    /*Task creation*/
-    iris_task task[kernel_names.size()];
-#else
-    iris_task task;
-#endif
-
-    if(DEBUGOUT) {
-      std::cout << "number of kernels is: " << kernel_names.size() << std::endl;
+      graphs.push_back(graph);
+    } else if(!dag_fusion) { //create multiple graphs for each DAG
+      iris_graph_create(&graph);
+      graphs.push_back(graph);
     }
-    for(int i = 0; i < kernel_names.size(); i++) {
-      if(DEBUGOUT) {
-        std::cout << "kernel name: " << kernel_names.at(i) << std::endl;
-      }
 
-#ifndef ENABLE_TASK_FUSION
-        iris_task_create(&task[i]);
-#else
-        if(i == 0) iris_task_create(&task);
-#endif
-        std::vector<void*> local_params;
-        std::vector<int> local_params_info; 
-        if((getIRISARCH().find("cuda") != std::string::npos || getIRISARCH().find("hip") != std::string::npos || getIRISARCH().find("opencl") != std::string::npos) && !findOpenMP()) {
-            if(DEBUGOUT) {
-                std::cout << "grid: " << kernel_params[i*6] <<  ", " << kernel_params[i*6+1] << ", " << kernel_params[i*6+2] << std::endl;
-                std::cout << "block: " << kernel_params[i*6+3] <<  ", " << kernel_params[i*6+4] <<  ", " << kernel_params[i*6+5] << std::endl;
-            }
-            std::vector<size_t> grid{(size_t)kernel_params[i*6]*kernel_params[i*6+3], (size_t)kernel_params[i*6+1]*kernel_params[i*6+4], (size_t)kernel_params[i*6+2]*kernel_params[i*6+5]};
-            std::vector<size_t> block{(size_t)kernel_params[i*6+3], (size_t)kernel_params[i*6+4], (size_t)kernel_params[i*6+5]};
-            for(int j = 0; j < kernel_args.at(i).size(); j++) {
+// #ifndef ENABLE_TASK_FUSION
+//     /*Task creation*/
+//     iris_task task[kernel_names.size()];
+// #else
+//     iris_task task;
+// #endif
+
+  std::vector<iris_task> task;
+  if(!task_fusion)
+    /*Task creation*/
+    task = std::vector<iris_task>{kernel_names.size()};
+  else
+    task = std::vector<iris_task>{1};
+
+  if(DEBUGOUT) {
+    std::cout << "number of kernels is: " << kernel_names.size() << std::endl;
+  }
+  for(int i = 0; i < kernel_names.size(); i++) {
+    if(DEBUGOUT) {
+      std::cout << "kernel name: " << kernel_names.at(i) << std::endl;
+    }
+
+// #ifndef ENABLE_TASK_FUSION
+//         iris_task_create(&task[i]);
+// #else
+//         if(i == 0) iris_task_create(&task);
+// #endif
+    if(!task_fusion)
+      iris_task_create(&task[i]);
+    else
+      if(i == 0) iris_task_create(&task[0]);
+    
+    std::vector<void*> local_params;
+    std::vector<int> local_params_info; 
+    if((getIRISARCH().find("cuda") != std::string::npos || getIRISARCH().find("hip") != std::string::npos || getIRISARCH().find("opencl") != std::string::npos) && !findOpenMP()) {
+        if(DEBUGOUT) {
+            std::cout << "grid: " << kernel_params[i*6] <<  ", " << kernel_params[i*6+1] << ", " << kernel_params[i*6+2] << std::endl;
+            std::cout << "block: " << kernel_params[i*6+3] <<  ", " << kernel_params[i*6+4] <<  ", " << kernel_params[i*6+5] << std::endl;
+        }
+        std::vector<size_t> grid{(size_t)kernel_params[i*6]*kernel_params[i*6+3], (size_t)kernel_params[i*6+1]*kernel_params[i*6+4], (size_t)kernel_params[i*6+2]*kernel_params[i*6+5]};
+        std::vector<size_t> block{(size_t)kernel_params[i*6+3], (size_t)kernel_params[i*6+4], (size_t)kernel_params[i*6+5]};
+        for(int j = 0; j < kernel_args.at(i).size(); j++) {
+          if(DEBUGOUT) 
+            std::cout << " the first kernel arg " << kernel_args.at(i).at(j) << std::endl;
+            if(arg2index.find(kernel_args.at(i).at(j)) != arg2index.end()) {
               if(DEBUGOUT) 
-                std::cout << " the first kernel arg " << kernel_args.at(i).at(j) << std::endl;
-                if(arg2index.find(kernel_args.at(i).at(j)) != arg2index.end()) {
-                  if(DEBUGOUT) 
-                    std::cout <<" the second kernel arg " << arg2index.at(kernel_args.at(i).at(j)) << std::endl;
-                    local_params.push_back(arg2index.at(kernel_args.at(i).at(j)));
-                    local_params_info.push_back(std::get<1>(new_params_info.at(i).at(j)));
+                std::cout <<" the second kernel arg " << arg2index.at(kernel_args.at(i).at(j)) << std::endl;
+                local_params.push_back(arg2index.at(kernel_args.at(i).at(j)));
+                local_params_info.push_back(std::get<1>(new_params_info.at(i).at(j)));
 
-                }
             }
-#ifndef ENABLE_TASK_FUSION
+        }
+// #ifndef ENABLE_TASK_FUSION
+//             iris_task_kernel(task[i], kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), kernel_args.at(i).size(), local_params.data(), local_params_info.data());
+// #else
+//             iris_task_kernel(task, kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), kernel_args.at(i).size(), local_params.data(), local_params_info.data());
+// #endif
+        if(!task_fusion)
             iris_task_kernel(task[i], kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), kernel_args.at(i).size(), local_params.data(), local_params_info.data());
-#else
-            iris_task_kernel(task, kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), kernel_args.at(i).size(), local_params.data(), local_params_info.data());
-#endif
+        else        
+            iris_task_kernel(task[0], kernel_names.at(i).c_str(), 3, NULL, grid.data(), block.data(), kernel_args.at(i).size(), local_params.data(), local_params_info.data());
         } else{/*CPU task creation DEPRECATED*/
             size_t value = (size_t)sizes.at(0);
-#ifndef ENABLE_TASK_FUSION
-            iris_task_kernel(task[i], kernel_names.at(i).c_str(), 1, NULL, &value, NULL, 3+pointers, params.data(), params_info.data());
-#else
-            iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, &value, NULL, 3+pointers, params.data(), params_info.data());
-#endif
+// #ifndef ENABLE_TASK_FUSION
+//             iris_task_kernel(task[i], kernel_names.at(i).c_str(), 1, NULL, &value, NULL, 3+pointers, params.data(), params_info.data());
+// #else
+//             iris_task_kernel(task, kernel_names.at(i).c_str(), 1, NULL, &value, NULL, 3+pointers, params.data(), params_info.data());
+// #endif
+            if(!task_fusion)
+              iris_task_kernel(task[i], kernel_names.at(i).c_str(), 1, NULL, &value, NULL, 3+pointers, params.data(), params_info.data());
+            else
+              iris_task_kernel(task[0], kernel_names.at(i).c_str(), 1, NULL, &value, NULL, 3+pointers, params.data(), params_info.data());
         }
       /*output flush to host*/
-	    if(i == kernel_names.size() -1)
-#ifndef ENABLE_TASK_FUSION
+	    if(i == kernel_names.size() -1){
+// #ifndef ENABLE_TASK_FUSION
+//           iris_task_d2h_full(task[i], *(iris_mem*)local_params.at(0), args.at(number_params));  
+// #else
+//           iris_task_d2h_full(task, *(iris_mem*)local_params.at(0), args.at(number_params));  
+// #endif
+        if(!task_fusion)
           iris_task_d2h_full(task[i], *(iris_mem*)local_params.at(0), args.at(number_params));  
-#else
-          iris_task_d2h_full(task, *(iris_mem*)local_params.at(0), args.at(number_params));  
-#endif
- 
-#ifndef ENABLE_TASK_FUSION
-        iris_graph_task(graph, task[i], iris_gpu, NULL);
-#else
-	    if(i == 0)
-            iris_graph_task(graph, task, iris_gpu, NULL);
-#endif
- 
+        else
+          iris_task_d2h_full(task[0], *(iris_mem*)local_params.at(0), args.at(number_params));  
+      }
+// #ifndef ENABLE_TASK_FUSION
+//         iris_graph_task(graph, task[i], iris_gpu, NULL);
+// #else
+// 	    if(i == 0)
+//             iris_graph_task(graph, task, iris_gpu, NULL);
+// #endif
+      if(!task_fusion)
+        iris_graph_task(graphs.back(), task[i], iris_gpu, NULL);//add to last graph which is new graph for no fusion or graph[0] for dag_fusion
+      else
+        if(i == 0)
+          iris_graph_task(graphs.back(), task[0], iris_gpu, NULL);
+  
     }
     if(DEBUGOUT) {
-      std::cout << "number of tasks added " << kernel_names.size() << std::endl;
-      std::cout << "total number of tasks in graph " << iris_graph_tasks_count(graph) << std::endl;
+      std::cout << "total number of graphs is " << graphs.size() << std::endl;
+      std::cout << "number of tasks added to current graph " << task.size() << std::endl;
+      int sum = 0;
+      for(auto g : graphs)
+        sum += iris_graph_tasks_count(g);
+      std::cout << "total number of tasks in graphs " << sum << std::endl;
     }
     /*arguement reset for DAG fusion*/
     arg2index.clear();
     number_params += sig_types.size();
-    multiDeviceScheduling();
+    if(dag_fusion)
+      multiDeviceScheduling(graphs.back());
 }
 
 void Executor::retainGraph(){
-    iris_graph_retain(graph, true);
+  for(int i = 0; i < graphs.size(); i++)
+    iris_graph_retain(graphs[i], true);
     graph_created = 1;
 }
 
 float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, std::string name) {
-  /*if execute without task graph creation*/
-  if(graph_created == 0) {
-    createGraph(args, sizes, name, graph_created == 0 ? false : true);
-    iris_graph_retain(graph, true);
-    graph_created = 1;
-    if(DEBUGOUT)
-    std::cout << "has the graph been created " << graph_created << std::endl;
-  }
+  // /*if execute without task graph creation*/
+  // if(graph_created == 0) {
+  //   createGraph(args, sizes, name, graph_created == 0 ? false : true);
+  //   iris_graph_retain(graph, true);
+  //   graph_created = 1;
+  //   if(DEBUGOUT)
+  //   std::cout << "has the graph been created " << graph_created << std::endl;
+  // }
   
   if(DEBUGOUT)
     std::cout << "the size of sig mem is" << index2mem.size() << " and " << args2output.size() << std::endl;
@@ -577,43 +632,45 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 
   if(DEBUGOUT)
     std::cout << "Executing graph" << std::endl;
-#ifndef GRAPH_MULTIPLE_EXECUTION
+// #ifndef GRAPH_MULTIPLE_EXECUTION
   std::cout << "hello from graph multi execution" << std::endl;
   auto start = std::chrono::high_resolution_clock::now();
-  iris_graph_submit(graph, iris_default, 1);
-  iris_graph_wait(graph);
+  for(int i = 0; i < graphs.size(); i++) {
+    iris_graph_submit(graphs[i], iris_default, 1);
+    iris_graph_wait(graphs[i]);
+  }
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
   std::cout << "Graph submission time: " << duration.count() << std::endl;
   CPUTime = duration.count();
   std::cout << "graph submission time: " << duration.count() << std::endl;
-#else
-  for(int m = 0; m < 10; m++){
-    for(int i = 0; i < args.size(); i++) {
-        if(index2mem.find(i) != index2mem.end()) {
-            //std::cout << "updated host pointer dmem object " << i << std::endl;
-            iris_data_mem_update(*index2mem.at(i), args.at(i));
-            for (auto it = args2output.begin(); it != args2output.end(); ) {
-                if (it->second == index2mem.at(i)) {
-                    it = args2output.erase(it);
-                break;
-                } else {
-                    ++it; 
-                }
-            }
-            args2output.insert(std::make_pair(args.at(i), index2mem.at(i)));
-        }
-    } 
+// #else
+//   for(int m = 0; m < 10; m++){
+//     for(int i = 0; i < args.size(); i++) {
+//         if(index2mem.find(i) != index2mem.end()) {
+//             //std::cout << "updated host pointer dmem object " << i << std::endl;
+//             iris_data_mem_update(*index2mem.at(i), args.at(i));
+//             for (auto it = args2output.begin(); it != args2output.end(); ) {
+//                 if (it->second == index2mem.at(i)) {
+//                     it = args2output.erase(it);
+//                 break;
+//                 } else {
+//                     ++it; 
+//                 }
+//             }
+//             args2output.insert(std::make_pair(args.at(i), index2mem.at(i)));
+//         }
+//     } 
   
-    auto start = std::chrono::high_resolution_clock::now();
-    iris_graph_submit(graph, iris_default, 1);
-    iris_graph_wait(graph);
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-    CPUTime = duration.count();
-    std::cout << "graph submission time: " << duration.count() << std::endl;
-  }
-#endif
+//     auto start = std::chrono::high_resolution_clock::now();
+//     iris_graph_submit(graph, iris_default, 1);
+//     iris_graph_wait(graph);
+//     auto stop = std::chrono::high_resolution_clock::now();
+//     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+//     CPUTime = duration.count();
+//     std::cout << "graph submission time: " << duration.count() << std::endl;
+//   }
+// #endif
 
   return getKernelTime();
 }
@@ -721,6 +778,14 @@ void Executor::execute2(std::string input, std::string arch) {
 
 }
 
+bool Executor::getDagFusion() {
+  return dag_fusion;
+}
+
+bool Executor::getTaskFusion() {
+  return task_fusion;
+}
+
 int Executor::getGraphCreated() {
   std::cout << "Get graph created: " << graph_created << std::endl;
   return graph_created;
@@ -734,7 +799,7 @@ float Executor::getKernelTime() {
     return CPUTime;
 }
 
-void Executor::multiDeviceScheduling(){
+void Executor::multiDeviceScheduling(iris_graph graph){
     int ndevices = 0;
     iris_device_count(&ndevices);
     //int dev_map[16][16];
@@ -745,6 +810,7 @@ void Executor::multiDeviceScheduling(){
     if (ntasks > 0)
         tasks = (iris_task *)malloc(sizeof(iris_task)*ntasks);
     iris_graph_get_tasks(graph, tasks);
+    int kernel_groups = task_fusion ? 1 : kernel_names.size();
     for(int i=0; i<ntasks; i++) {
         iris_task task = tasks[i];
         //printf("task %s and task serial %d, total devices %d, device %d \n", iris_task_get_name(task), i, ndevices, id );
@@ -759,14 +825,17 @@ void Executor::multiDeviceScheduling(){
         */
         iris_task_set_policy(task, id);
 
-#if !defined(ENABLE_TASK_FUSION) && !defined(ENABLE_KERNEL_FUSION)
-        if (((i+1) % 19) == 0) {
-#elif defined(ENABLE_KERNEL_FUSION) && !defined(ENABLE_TASK_FUSION)
-        if (((i+1) % 5) == 0) {
-#else
-        if (((i+1) % 1) == 0) {
-#endif
-            std::cout << (i+1)%5 << " " << id << std::endl;
+// #if !defined(ENABLE_TASK_FUSION) && !defined(ENABLE_KERNEL_FUSION)
+//         if (((i+1) % 19) == 0) {
+// #elif defined(ENABLE_KERNEL_FUSION) && !defined(ENABLE_TASK_FUSION)
+//         if (((i+1) % 5) == 0) {
+// #else
+//         if (((i+1) % 1) == 0) {
+// #endif
+        if(((i+1) % kernel_groups) == 0) {
+            if(DEBUGOUT)
+              std::cout << " task " << (i+1)%kernel_groups << " assigned to device id " << id << std::endl;
+            
             id = id + 1;
             if (id == ndevices) id = 0;
         }

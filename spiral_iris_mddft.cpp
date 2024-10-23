@@ -73,6 +73,8 @@ for(int i = 0; i < iter; i++){
     std::cout << (double*)(args.at(i)) << std::endl;
     delete [](double*)(args.at(i));
   }
+
+  mdp.resetInput();
   args.clear();
   std::cout << args.size() << std::endl;
 for(int i = 0; i < iter; i++){
