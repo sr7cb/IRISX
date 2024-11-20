@@ -111,6 +111,51 @@ std::string getSPIRAL() {
     return tmp;
 }
 
+// Function to convert string to boolean
+bool stringToBool(const std::string& str) {
+    return str == "true";
+}
+
+void parseConfigFile(std::ifstream& infile, int &fusion_level, bool &dag_fusion, bool &task_fusion) {
+    std::string line;
+    int line_number = 0;
+
+    // Loop to read each line and process based on line number
+    while (std::getline(infile, line)) {
+        size_t pos = line.find('=');
+        std::string value = line.substr(pos + 1);
+
+        if (line_number == 0) {
+            fusion_level = std::stoi(value);        // First line: fusion_level
+        } else if (line_number == 1) {
+            dag_fusion = stringToBool(value);       // Second line: dag_fusion
+        } else if (line_number == 2) {
+            task_fusion = stringToBool(value);      // Third line: task_fusion
+        }
+        
+        line_number++;
+    }
+
+    infile.close();
+}
+
+void writeConfigFile(const std::string& filename, int fusion_level, bool dag_fusion, bool task_fusion) {
+    std::ofstream outfile(filename);
+    
+    if (!outfile.is_open()) {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return;
+    }
+
+    // Write the variables to the file in the expected format
+    outfile << "fusion_level=" << fusion_level << std::endl;
+    outfile << "dag_fusion=" << (dag_fusion ? "true" : "false") << std::endl;
+    outfile << "task_fusion=" << (task_fusion ? "true" : "false") << std::endl;
+
+    outfile.close();
+}
+
+
 void getImportAndConfIRIS(std::string arch) {
     std::cout << "Load(fftx);\nImportAll(fftx);" << std::endl;
     std::cout << "ImportAll(simt);\nLoad(jit);\nImport(jit);"<< std::endl;
@@ -147,7 +192,7 @@ void printIRISBackend(std::string name, std::vector<int> sizes, std::string arch
 
 class FFTXProblem {
 public:
-    std::vector<Executor> e(3);//vector of possible configurations  kernel x serial x dag x task 
+    std::vector<Executor> e{4};//vector of possible configurations, default K=1, [4*K], (no fusion, dag fusion, no fusion + task fusion , dag fusion + task _fusion) * kernel_fusion
     int selected = 0;
     bool autotune = true;
     bool gen_executor = false;
@@ -189,10 +234,12 @@ public:
     void setArgs(const std::vector<void*>& args1);
     void setName(std::string name);
     void transform();
+    void transform(int fusion_levels);
+    void readKernels(int fusion_levels);
     void readKernels();
     void createGraph();
     void resetInput();
-    void autotune();
+    void autotuneIRISX();
     std::string semantics2(std::string arch);
     virtual void randomProblemInstance() = 0;
     virtual void semantics(std::string arch) = 0;
@@ -314,10 +361,11 @@ std::string FFTXProblem::semantics2(std::string arch) {
 }
 
 //going through DAG configurations only atm
-void FFTXProblem::autotune() {
+void FFTXProblem::autotuneIRISX() {
   std::vector<float> time; 
   for(int i = 0; i < e.size(); i++) {
-    time.push_back(e.initAndLaunch());
+    e[i].initAndLaunch(args, sizes, name);//warmup run
+    time.push_back(e[i].initAndLaunch(args, sizes, name)); //time run
   }
   auto minElement = std::min_element(time.begin(), time.end());
   // Check if the vector is not empty
@@ -325,7 +373,7 @@ void FFTXProblem::autotune() {
       // Get the index of the minimum element
       selected = std::distance(time.begin(), minElement);
       if(DEBUGOUT){
-        std::cout << "The index of the minimum value is: " << index << std::endl;
+        std::cout << "The index of the minimum value is: " << selected << std::endl;
         std::cout << "The minimum value is: " << *minElement << std::endl;
       }
   } else {
@@ -333,6 +381,7 @@ void FFTXProblem::autotune() {
         std::cout << "The list is empty." << std::endl;
       }
   }
+  writeConfigFile(getIRISX().append("/config.txt"), (selected/4)+1, e[selected].getDagFusion(), e[selected].getTaskFusion());
   autotune = false;
 }
 
@@ -372,8 +421,8 @@ void FFTXProblem::createGraph() {
   }
 }
 
-
 void FFTXProblem::readKernels(){
+  int fusion_levels = 1;
   if(gen_executor != true) { //check in memory cache
       std::string flag = "";
       if(getIRISARCH().find("openmp") != std::string::npos) {
@@ -413,15 +462,123 @@ void FFTXProblem::readKernels(){
         std::string file_name = getIRISX().append("/config.txt");
         std::ifstream ifs ( file_name );
         if(ifs) {
+          if(DEBUGOUT)
+            std::cout << "autotuning not needed use stored config" << std::endl;
           autotune = false;
-          e[0].setup(true, true, true);
+          //parse config.txt file
+          int flevel = 1;
+          bool dagf = false;
+          bool taskf = false;
+          parseConfigFile(ifs, flevel, dagf, taskf);
+          if(DEBUGOUT)
+            std::cout << "stored config has " << "dag_fusion = " << dagf << " task fusion = " << taskf << " with fusion level = " << flevel << std::endl;    
+          e[0].setup(dagf, taskf);
         }
       }
       if(autotune) {
-        for(int i = 0; i < e.size(); i++)
-          e[i].execute();
-      } else
+        if(fusion_levels > 1) {
+          e.resize(fusion_levels * 4);
+        }
+        for(int i = 0;i < fusion_levels; i++){
+          for(int j = 0; j < 2; j++) { //no fusion or dag fusion
+            for(int k = 0; k < 2; k++) { // no task fusion or task fusion
+              if(DEBUGOUT)
+                std::cout << "index " << i*(2*2) + j*2 + k << " has config: dag_fusion = " << ((j%2) == 0 ? "false" : "true") << " task_fusion = " << ((k%2) == 0 ? "false" : "true") << std::endl;
+                e[i*(2*2) + j*2 + k].setup((j%2) == 0 ? false : true, (k%2) == 0 ? false : true);
+                e[i*(2*2) + j*2 + k].execute();
+            }
+          }
+        }
+      } else 
         e[0].execute();
+  }
+}
+
+
+
+void FFTXProblem::readKernels(int fusion_levels){
+  if(gen_executor != true) { //check in memory cache
+      std::string flag = "";
+      if(getIRISARCH().find("openmp") != std::string::npos) {
+          flag = "openmp";
+      }
+      std::stringstream ss(getIRISARCH());
+      std::string word;
+      while (!ss.eof()) {
+          std::ostringstream oss;
+          std::getline(ss, word, ':');
+          std::cout << "looking for arch " << word << std::endl;
+          if(word == "cuda" && flag == "")
+              oss << "kerneljit.cu";
+          else if(word == "cuda" && flag == "openmp") 
+              oss << "kernel_host2cuda.cu";
+          else if(word == "hip" && flag == "")
+              oss << "kerneljit.hip.cpp";
+          else if(word == "hip" && flag == "openmp")
+              oss << "kernel_host2hip.c";
+          else if(word == "opencl" && flag == "")
+              oss << "kerneljit.cl";
+          else if(word == "openmp") 
+              oss << "kernel_openmp.c";
+          else
+              oss << "borken";
+          std::string file_name = getIRISX().append("/" + oss.str());
+          std::ifstream ifs ( file_name );
+          if(!ifs) {
+              std::cout << "arch " << word << " not found" << std::endl;
+              if(word != "openmp")
+                  res = semantics2(word+flag); 
+              else
+                  res = semantics2(word);
+          }
+      }
+      if(autotune) {
+        std::string file_name = getIRISX().append("/config.txt");
+        std::ifstream ifs ( file_name );
+        if(ifs) {
+          if(DEBUGOUT)
+            std::cout << "autotuning not needed use stored config" << std::endl;
+          autotune = false;
+          //parse config.txt file
+          int flevel = 1;
+          bool dagf = false;
+          bool taskf = false;
+          parseConfigFile(ifs, flevel, dagf, taskf);
+          if(DEBUGOUT)
+            std::cout << "stored config has " << "dag_fusion = " << dagf << " task fusion = " << taskf << " with fusion level = " << flevel << std::endl;    
+          e[0].setup(dagf, taskf);
+        }
+      }
+      if(autotune) {
+        if(fusion_levels > 1) {
+          e.resize(fusion_levels * 4);
+        }
+        for(int i = 0;i < fusion_levels; i++){
+          for(int j = 0; j < 2; j++) { //no fusion or dag fusion
+            for(int k = 0; k < 2; k++) { // no task fusion or task fusion
+              if(DEBUGOUT)
+                std::cout << "index " << i*(2*2) + j*2 + k << " has config: dag_fusion = " << ((j%2) == 0 ? "true" : "false") << " task_fusion = " << ((k%2) == 0 ? "true" : "false") << std::endl;
+                e[i*(2*2) + j*2 + k].setup((j%2) == 0 ? true : false, (k%2) == 0 ? true : false);
+                e[i*(2*2) + j*2 + k].execute();
+            }
+          }
+        }
+      } else 
+        e[0].execute();
+  }
+}
+
+void FFTXProblem::transform(int fusion_levels){
+  if(gen_executor == true) { //code generation and task graph created
+    if ( DEBUGOUT) std::cout << "cached size found, running cached instance\n";
+    run();
+    dont_append = true;
+  } else { //generate kernels or read from disk, create task graph, execute
+    readKernels(fusion_levels);
+    createGraph();
+    run();
+    gen_executor = true;
+    dont_append = true;
   }
 }
 
@@ -431,7 +588,7 @@ void FFTXProblem::transform(){
     run();
     dont_append = true;
   } else { //generate kernels or read from disk, create task graph, execute
-    readKernels();
+    readKernels(1);
     createGraph();
     run();
     gen_executor = true;
@@ -441,7 +598,7 @@ void FFTXProblem::transform(){
 
 void FFTXProblem::run() {
   if(autotune){
-    autotune();
+    autotuneIRISX();
   }
   gpuTime = e[selected].initAndLaunch(args, sizes, name);
 }

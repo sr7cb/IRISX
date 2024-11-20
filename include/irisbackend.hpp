@@ -35,6 +35,12 @@
 #define DEBUGOUT 0
 #endif
 
+#if defined ( VERBOSE )
+#define VDEBUGOUT 1
+#else
+#define VDEBUGOUT 0
+#endif
+
 // #define ENABLE_KERNEL_FUSION
 // #define ENABLE_TASK_FUSION
 // #define GRAPH_MULTIPLE_EXECUTION
@@ -121,7 +127,7 @@ class Executor {
         std::vector<iris_graph> graphs;
         int number_params = 0;
 
-        /*Exeuction time in ms*/
+        /*Exeuction time in microseconds*/
         float CPUTime;
     public:
         // Executor(int fl, bool dag_f, bool task_f) : fusion_level(fl), dag_fusion(dag_f), task_fusion(task_f) {}
@@ -205,7 +211,7 @@ int Executor::parseDataStructure(std::string input) {
                 int loc = atoi(words.at(1).c_str());
                 int size = atoi(words.at(2).c_str());
                 int dt = atoi(words.at(3).c_str());
-                if(DEBUGOUT)
+                if(DEBUGOUT && VDEBUGOUT)
                 std::cout << loc << ":" << dt << std::endl;
                 //convert this to a string because spiral prints string type
                 switch(dt) {
@@ -243,7 +249,7 @@ int Executor::parseDataStructure(std::string input) {
                     }
                     case 2: //double
                     {
-                      if(DEBUGOUT)
+                      if(DEBUGOUT && VDEBUGOUT)
                         std::cout << "This is the words size double\n" << words.size() << std::endl;
                         if(words.size() < 5) {
                             double * data1 = new double[size];
@@ -263,7 +269,7 @@ int Executor::parseDataStructure(std::string input) {
                     }
                     case 3: //constant
                     {
-                      if(DEBUGOUT)
+                      if(DEBUGOUT && VDEBUGOUT)
                         std::cout << "This is the words size constant\n" << words.size() << std::endl;
                         if(words.size() < 5) {
                             double * data1 = new double[size];
@@ -307,8 +313,9 @@ void Executor::setup(bool dag_f, bool task_f){
 
 /*IRISX task graph creation*/
 void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std::string name, bool iris_graph_created) {
-    if ( DEBUGOUT) {
-        std::cout << "In create and run graph" << std::endl;
+    if(DEBUGOUT)
+      std::cout << "In create and run graph" << std::endl;
+    if ( DEBUGOUT && VDEBUGOUT) {
         for(int i = 0; i < sizes.size(); i++) {
             std::cout << "size " << i << ": " << sizes.at(i) << " ";
         }
@@ -330,8 +337,8 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
     /*Check if host arguements match kernels*/
     int user_size = args.size() - number_params;
     if(user_size != sig_types.size() && !findOpenMP()) {
-        std::cout << "this is the passed in sig size " <<  args.size() << " this is the size of kernel " << sig_types.size() << std::endl;
-        std::cout << "Error signatures do not match need to pass more parameters from driver to createGraph" << std::endl;
+        std::cout << "Error the SPIRAL generated code is looking for a different number of parameters than the amount provided in input arguement list" << std::endl;
+        std::cout << "this is the passed in argument list size " <<  args.size() << " this is the number of arguments in the function " << sig_types.size() << std::endl;
         std::cout << "Verify that the generated kernel files are the problem you want to run with proper arguments" << std::endl;
         exit(-1);
     }
@@ -356,7 +363,7 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
 
     } else { /*Accelerator host pointer creation*/
       for(int i = 0; i < sig_types.size(); i++) {
-          if(DEBUGOUT)
+          if(DEBUGOUT && VDEBUGOUT)
             std::cout << std::get<0>(sig_types.at(i)) << ":" << std::get<1>(sig_types.at(i)) << std::endl;
             std::string type = std::get<1>(sig_types.at(i));
             switch(hashit(type)) {
@@ -414,7 +421,7 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
     int pointers = 0;
     for(int i = 0; i < device_names.size(); i++) {
         std::string test = std::get<2>(device_names[i]);
-        if(DEBUGOUT)
+        if(DEBUGOUT && VDEBUGOUT)
         std::cout << std::get<0>(device_names[i]) << ":" << test << std::endl;
         switch(hashit(test)) {
             case constant:
@@ -466,7 +473,7 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
         }
     }
 
-    if(DEBUGOUT) {
+    if(DEBUGOUT && VDEBUGOUT) {
       for (const auto& pair : arg2index) {
           std::cout << pair.first << " ";
       }
@@ -500,7 +507,7 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
     std::cout << "number of kernels is: " << kernel_names.size() << std::endl;
   }
   for(int i = 0; i < kernel_names.size(); i++) {
-    if(DEBUGOUT) {
+    if(DEBUGOUT && VDEBUGOUT) {
       std::cout << "kernel name: " << kernel_names.at(i) << std::endl;
     }
 
@@ -517,17 +524,17 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
     std::vector<void*> local_params;
     std::vector<int> local_params_info; 
     if((getIRISARCH().find("cuda") != std::string::npos || getIRISARCH().find("hip") != std::string::npos || getIRISARCH().find("opencl") != std::string::npos) && !findOpenMP()) {
-        if(DEBUGOUT) {
+        if(DEBUGOUT && VDEBUGOUT) {
             std::cout << "grid: " << kernel_params[i*6] <<  ", " << kernel_params[i*6+1] << ", " << kernel_params[i*6+2] << std::endl;
             std::cout << "block: " << kernel_params[i*6+3] <<  ", " << kernel_params[i*6+4] <<  ", " << kernel_params[i*6+5] << std::endl;
         }
         std::vector<size_t> grid{(size_t)kernel_params[i*6]*kernel_params[i*6+3], (size_t)kernel_params[i*6+1]*kernel_params[i*6+4], (size_t)kernel_params[i*6+2]*kernel_params[i*6+5]};
         std::vector<size_t> block{(size_t)kernel_params[i*6+3], (size_t)kernel_params[i*6+4], (size_t)kernel_params[i*6+5]};
         for(int j = 0; j < kernel_args.at(i).size(); j++) {
-          if(DEBUGOUT) 
+          if(DEBUGOUT && VDEBUGOUT) 
             std::cout << " the first kernel arg " << kernel_args.at(i).at(j) << std::endl;
             if(arg2index.find(kernel_args.at(i).at(j)) != arg2index.end()) {
-              if(DEBUGOUT) 
+              if(DEBUGOUT && VDEBUGOUT) 
                 std::cout <<" the second kernel arg " << arg2index.at(kernel_args.at(i).at(j)) << std::endl;
                 local_params.push_back(arg2index.at(kernel_args.at(i).at(j)));
                 local_params_info.push_back(std::get<1>(new_params_info.at(i).at(j)));
@@ -632,8 +639,7 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
 
   if(DEBUGOUT)
     std::cout << "Executing graph" << std::endl;
-// #ifndef GRAPH_MULTIPLE_EXECUTION
-  std::cout << "hello from graph multi execution" << std::endl;
+
   auto start = std::chrono::high_resolution_clock::now();
   for(int i = 0; i < graphs.size(); i++) {
     iris_graph_submit(graphs[i], iris_default, 1);
@@ -641,36 +647,9 @@ float Executor::initAndLaunch(std::vector<void*>& args, std::vector<int> sizes, 
   }
   auto stop = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-  std::cout << "Graph submission time: " << duration.count() << std::endl;
   CPUTime = duration.count();
-  std::cout << "graph submission time: " << duration.count() << std::endl;
-// #else
-//   for(int m = 0; m < 10; m++){
-//     for(int i = 0; i < args.size(); i++) {
-//         if(index2mem.find(i) != index2mem.end()) {
-//             //std::cout << "updated host pointer dmem object " << i << std::endl;
-//             iris_data_mem_update(*index2mem.at(i), args.at(i));
-//             for (auto it = args2output.begin(); it != args2output.end(); ) {
-//                 if (it->second == index2mem.at(i)) {
-//                     it = args2output.erase(it);
-//                 break;
-//                 } else {
-//                     ++it; 
-//                 }
-//             }
-//             args2output.insert(std::make_pair(args.at(i), index2mem.at(i)));
-//         }
-//     } 
-  
-//     auto start = std::chrono::high_resolution_clock::now();
-//     iris_graph_submit(graph, iris_default, 1);
-//     iris_graph_wait(graph);
-//     auto stop = std::chrono::high_resolution_clock::now();
-//     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-//     CPUTime = duration.count();
-//     std::cout << "graph submission time: " << duration.count() << std::endl;
-//   }
-// #endif
+  if(DEBUGOUT)
+    std::cout << "graph submission time: " << duration.count() << std::endl;
 
   return getKernelTime();
 }
@@ -682,7 +661,7 @@ void Executor::execute() {
     if(getIRISARCH().find("openmp") != std::string::npos) {
         flag = "openmp";
     }
-    if(DEBUGOUT)
+    if(DEBUGOUT && VDEBUGOUT)
         std::cout << "determined if openmp is provided" << std::endl;
     std::stringstream ss(getIRISARCH());
     std::string word;
@@ -718,34 +697,34 @@ void Executor::execute() {
 }
 
 void Executor::execute2(std::string input, std::string arch) {
-  if(DEBUGOUT)
+  if(DEBUGOUT && VDEBUGOUT)
     std::cout << "arch in execute2 " << arch << std::endl;
     if((arch == "cuda" || arch == "hip" || arch == "opencl") && parsed == 0 && !findOpenMP()) {
         parsed = parseDataStructure ( input );
-        if(DEBUGOUT)
+        if(DEBUGOUT && VDEBUGOUT)
         std::cout << "parsed " << parsed << std::endl;
     } else {
-      if(DEBUGOUT)
+      if(DEBUGOUT && VDEBUGOUT)
         std::cout << "got into else branch for 1 kernel\n";
         if(kernel_names.size() == 0)
             kernel_names.push_back("iris_spiral_kernel");
     }
     if(arch == "cuda") {
-      if(DEBUGOUT)
+      if(DEBUGOUT && VDEBUGOUT)
         std::cout << "in cuda code portion\n";
         std::string command;
         command.append("nvcc -Xcudafe --diag_suppress=declared_but_not_referenced -ptx " + getIRISX() + "/kernel.cu");
         system(command.c_str());
     }
     else if(arch == "hip") {
-      if(DEBUGOUT)
+      if(DEBUGOUT && VDEBUGOUT)
         std::cout << "in hip code portion\n";
         std::string command;
         command.append("hipcc --genco -o kernel.hip " + getIRISX() + "/kernel.hip.cpp");
         system(command.c_str());
     }
     else if(arch == "opencl") {
-        if(DEBUGOUT)
+        if(DEBUGOUT && VDEBUGOUT)
           std::cout << "in opencl code portion\n";
           std::string command;
           command.append("clang -cc1 -finclude-default-header -triple spir " + getIRISX() + "kernel.cl -O0 -flto -emit-llvm-bc -o kernel.bc");
@@ -769,7 +748,7 @@ void Executor::execute2(std::string input, std::string arch) {
             command.append(" -O3 -std=c99");
             command.append(" -fopenmp -march=native -mavx2 -fPIC -shared -I. -o kernel.openmp.so kernel_openmp.c");
         }
-        if(DEBUGOUT)
+        if(DEBUGOUT && VDEBUGOUT)
         std::cout << command << std::endl;
         system(command.c_str());
     }
@@ -833,7 +812,7 @@ void Executor::multiDeviceScheduling(iris_graph graph){
 //         if (((i+1) % 1) == 0) {
 // #endif
         if(((i+1) % kernel_groups) == 0) {
-            if(DEBUGOUT)
+            if(DEBUGOUT && VDEBUGOUT)
               std::cout << " task " << (i+1)%kernel_groups << " assigned to device id " << id << std::endl;
             
             id = id + 1;
