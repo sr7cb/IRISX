@@ -8,6 +8,9 @@ CFLAGS=-pg
 
 all: proto_ipdps
 
+test_different_kernels:
+		g++ -DPRINTDEBUG -ggdb -I$(IRIS_PATH)/include -I. -Wunused-result $(CFLAGS) -o tdkernels test_multi_kernel.cpp $(LDFLAGS)
+
 proto_ipdps:
 	g++ --std=c++17 -I$(IRIS_PATH)/include -I. -I$(PROTO_PATH)/include -I$(PROTO_PATH) -O3 -DDIM=3 -DHDF5=off -DIRIS -o proto_ipdps_dag spiral_proto_leveleuler_mpi.cpp $(LDFLAGS)
 
@@ -29,7 +32,7 @@ irisx_proto:
 	g++ -I$(IRIS_PATH)/include -I. -Wunused-result -ggdb -O3 $(CFLAGS) -DPRINTDEBUG -o irisx_proto spiral_proto_leveleuler.cpp $(LDFLAGS)
 
 mddft:
-	g++  -ggdb -I$(IRIS_PATH)/include -I. -Wunused-result $(CFLAGS) -o irisx_mddft spiral_iris_mddft.cpp $(LDFLAGS)
+	g++ -DPRINTDEBUG -ggdb -I$(IRIS_PATH)/include -I. -Wunused-result $(CFLAGS) -o irisx_mddft spiral_iris_mddft.cpp $(LDFLAGS)
 
 mdprdft:
 	g++ -I$(IRIS_PATH)/include -I. -Wunused-result -O3 $(CFLAGS) -o irisx_mdprdft spiral_iris_mdprdft.cpp $(LDFLAGS)
