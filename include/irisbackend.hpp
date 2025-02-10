@@ -156,6 +156,10 @@ Executor::string_code Executor::hashit(std::string const& inString) {
     if(inString == "pointer_int") return pointer_int;
     if(inString == "pointer_float") return pointer_float;
     if(inString == "pointer_double") return pointer_double;
+    if(inString == "pointer_uint64_t") return pointer_uint64_t;
+    if(inString == "pointer_uint32_t") return pointer_uint32_t;
+    if(inString == "pointer_uint16_t") return pointer_uint16_t;
+    if(inString == "pointer_uint8_t") return pointer_uint8_t;
     return mone;
 }
 
@@ -401,6 +405,62 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
                   }
                   break;
                 }
+                case pointer_uint64_t:
+                {
+                  if(args2output.find(args.at(i+number_params)) == args2output.end()) {
+                      iris_mem * mem_p = new iris_mem;
+                      iris_data_mem_create(mem_p, args.at(i+number_params), sizes.at(i) * sizeof(uint64_t));
+                      iris_register_pin_memory(args.at(i+number_params), sizes.at(i) * sizeof(uint64_t));
+                      args2output.insert(std::make_pair(args.at(i+number_params), mem_p));
+                      index2mem.insert(std::make_pair(i+number_params, mem_p));
+                      arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), mem_p));
+                  } else {
+                      arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), args2output.at(args.at(i+number_params))));
+                  }
+                  break;
+                }
+                case pointer_uint32_t:
+                {
+                  if(args2output.find(args.at(i+number_params)) == args2output.end()) {
+                      iris_mem * mem_p = new iris_mem;
+                      iris_data_mem_create(mem_p, args.at(i+number_params), sizes.at(i) * sizeof(uint32_t));
+                      iris_register_pin_memory(args.at(i+number_params), sizes.at(i) * sizeof(uint32_t));
+                      args2output.insert(std::make_pair(args.at(i+number_params), mem_p));
+                      index2mem.insert(std::make_pair(i+number_params, mem_p));
+                      arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), mem_p));
+                  } else {
+                      arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), args2output.at(args.at(i+number_params))));
+                  }
+                  break;
+                }
+                case pointer_uint16_t:
+                {
+                  if(args2output.find(args.at(i+number_params)) == args2output.end()) {
+                      iris_mem * mem_p = new iris_mem;
+                      iris_data_mem_create(mem_p, args.at(i+number_params), sizes.at(i) * sizeof(uint16_t));
+                      iris_register_pin_memory(args.at(i+number_params), sizes.at(i) * sizeof(uint16_t));
+                      args2output.insert(std::make_pair(args.at(i+number_params), mem_p));
+                      index2mem.insert(std::make_pair(i+number_params, mem_p));
+                      arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), mem_p));
+                  } else {
+                      arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), args2output.at(args.at(i+number_params))));
+                  }
+                  break;
+                }
+                case pointer_uint8_t:
+                {
+                  if(args2output.find(args.at(i+number_params)) == args2output.end()) {
+                      iris_mem * mem_p = new iris_mem;
+                      iris_data_mem_create(mem_p, args.at(i+number_params), sizes.at(i) * sizeof(uint8_t));
+                      iris_register_pin_memory(args.at(i+number_params), sizes.at(i) * sizeof(uint8_t));
+                      args2output.insert(std::make_pair(args.at(i+number_params), mem_p));
+                      index2mem.insert(std::make_pair(i+number_params, mem_p));
+                      arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), mem_p));
+                  } else {
+                      arg2index.insert(std::make_pair(std::get<0>(sig_types.at(i)), args2output.at(args.at(i+number_params))));
+                  }
+                  break;
+                }
                 case two:
                 {
                   for(int j = 0; j < new_params_info.size(); j++) {
@@ -456,6 +516,42 @@ void Executor::createGraph(std::vector<void*>& args, std::vector<int> sizes, std
                 iris_mem * mem_p = new iris_mem;
     		        iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
                 iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(double));
+                pointers++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
+                break;
+            }
+            case pointer_uint64_t:
+            {
+                iris_mem * mem_p = new iris_mem;
+    		        iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(uint64_t));
+                iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(uint64_t));
+                pointers++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
+                break;
+            }
+            case pointer_uint32_t:
+            {
+                iris_mem * mem_p = new iris_mem;
+    		        iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(uint32_t));
+                iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(uint32_t));
+                pointers++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
+                break;
+            }
+            case pointer_uint16_t:
+            {
+                iris_mem * mem_p = new iris_mem;
+    		        iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(uint16_t));
+                iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(uint16_t));
+                pointers++;
+                arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
+                break;
+            }
+            case pointer_uint8_t:
+            {
+                iris_mem * mem_p = new iris_mem;
+    		        iris_data_mem_create(mem_p, data.at(i), std::get<1>(device_names.at(i)) * sizeof(uint8_t));
+                iris_register_pin_memory(data.at(i), std::get<1>(device_names.at(i)) * sizeof(uint8_t));
                 pointers++;
                 arg2index.insert(std::make_pair(std::get<0>(device_names[i]), mem_p));
                 break;
