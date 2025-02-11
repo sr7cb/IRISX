@@ -26,7 +26,9 @@
 #include <array>
 #include <chrono>
 #include <bits/stdc++.h>
+#include <pthread.h>
 #include <algorithm>
+#include <atomic>
 #include "irisbackend.hpp"
 
 #pragma once
@@ -39,6 +41,8 @@
 
 class Executor;
 class FFTXProblem;
+
+std::atomic<bool> new_kernels(false);
 
 std::string exec(const char* cmd) {
     std::array<char, 128> buffer;
@@ -199,7 +203,6 @@ public:
     std::vector<void*> args;
     std::vector<int> sizes;
     std::string res;
-    std::map<std::vector<int>, Executor> executors;
     std::string name;
     FFTXProblem(){
     }
@@ -234,12 +237,13 @@ public:
     void setArgs(const std::vector<void*>& args1);
     void setName(std::string name);
     void transform();
-    void transform(int fusion_levels);
-    void readKernels(int fusion_levels);
+    void transform(int fusion_levels); //user provided value for # of kernel variants
+    void readKernels(int fusion_levels); //user provided value for # of kernel variants
     void readKernels();
     void createGraph();
     void resetInput();
     void autotuneIRISX();
+    void createNewKernels();
     std::string semantics2(std::string arch);
     virtual void randomProblemInstance() = 0;
     virtual void semantics(std::string arch) = 0;
@@ -359,6 +363,9 @@ std::string FFTXProblem::semantics2(std::string arch) {
     // return nullptr;
     // return "cuda";
 }
+
+
+
 
 //going through DAG configurations only atm
 void FFTXProblem::autotuneIRISX() {
@@ -494,6 +501,67 @@ void FFTXProblem::readKernels(){
   }
 }
 
+bool is_file_ready(const char *filename) {
+    struct stat file_stat;
+    return (stat(filename, &file_stat) == 0 && file_stat.st_size > 0);
+}
+
+
+static void* create_new_kernel(void* arg) {
+   if(DEBUGOUT) {
+        std::cout << "creating thread to make new generated code" << std::endl;
+   } 
+//    system("rm kernel*");
+   FFTXProblem* instance = static_cast<FFTXProblem*>(arg);
+   std::stringstream ss(getIRISARCH());
+   std::string word;
+   std::string flag = "";
+   while (!ss.eof()) {
+        std::ostringstream oss;
+        std::getline(ss, word, ':');
+        std::cout << "looking for arch " << word << std::endl;
+        if(word == "cuda" && flag == "")
+            oss << "kerneljit.cu";
+        else if(word == "cuda" && flag == "openmp") 
+            oss << "kernel_host2cuda.cu";
+        else if(word == "hip" && flag == "")
+            oss << "kerneljit.hip.cpp";
+        else if(word == "hip" && flag == "openmp")
+            oss << "kernel_host2hip.c";
+        else if(word == "opencl" && flag == "")
+            oss << "kerneljit.cl";
+        else if(word == "openmp") 
+            oss << "kernel_openmp.c";
+        else
+            oss << "borken";
+        std::string file_name = getIRISX().append("/" + oss.str());
+        std::ifstream ifs ( file_name );
+        std::string res;
+        res = instance->semantics2(word+flag);
+        // if(!ifs) {
+        //     std::cout << "arch " << word << " not found" << std::endl;
+        //     if(word != "openmp")
+        //         res = instance->semantics2(word+flag); 
+        //     else
+        //         res = instance->semantics2(word);
+        // }
+    }
+   new_kernels.store(true, std::memory_order_release);
+   if(DEBUGOUT) {
+        std::cout << "new code generated" << std::endl;
+   } 
+   return NULL;
+}
+
+void FFTXProblem::createNewKernels(){
+
+    pthread_t thread;
+    if(pthread_create(&thread, nullptr, create_new_kernel, this) != 0) {
+        perror("pthread_create");
+        exit(-1);
+    }
+    pthread_detach(thread);
+}
 
 
 void FFTXProblem::readKernels(int fusion_levels){
@@ -583,14 +651,31 @@ void FFTXProblem::transform(int fusion_levels){
 }
 
 void FFTXProblem::transform(){
-  if(gen_executor == true) { //code generation and task graph created
+  if(new_kernels.load(std::memory_order_acquire)) {
+    Executor newe;
+    newe.setup(false, false);
+    newe.execute();
+    newe.createGraph(args, sizes, name, initialized_graph);
+    e[selected] = newe;
+    if(DEBUGOUT) {
+        std::cout << "running newly created code" << std::endl;
+    }
+    run();
+    new_kernels.store(false, std::memory_order_release);
+    // if(!new_kernels.load(std::memory_order_acquire)) 
+    //     createNewKernels();
+  } else if(gen_executor == true) { //code generation and task graph created
     if ( DEBUGOUT) std::cout << "cached size found, running cached instance\n";
     run();
+    // if(!new_kernels.load(std::memory_order_acquire)) 
+    //     createNewKernels();
     dont_append = true;
   } else { //generate kernels or read from disk, create task graph, execute
     readKernels(1);
     createGraph();
     run();
+    if(!new_kernels.load(std::memory_order_acquire)) 
+        createNewKernels();
     gen_executor = true;
     dont_append = true;
   }

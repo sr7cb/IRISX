@@ -1,11 +1,8 @@
 #include <iris/iris.hpp>
 #include <iris/iris_openmp.h>
 #include <vector>
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
 #include <include/interface.hpp>
 #include <include/nttlib.hpp>
-#pragma GCC diagnostic pop
 #include <stdio.h>
 #include <iostream>
 #include <chrono>
@@ -52,33 +49,32 @@ int main(int argc, char** argv) {
   iris::Platform platform;
   platform.init(&argc, &argv, true);
   auto start = std::chrono::high_resolution_clock::now();
-  int n,m,k;
-  n = 64;
+  int n,m;
+  n = 2;
   m = 64;
-  k = 64;
 
   int iter = 2;
-  std::vector<int> sizes{n*m*k*2, n*m*k*2, n*m*k*2, n, m, k};
+  std::vector<int> sizes{m*n, m*n, 0};
 
   // buildInputBuffer(X, sizes);
   std::vector<void*> args;
-  MDDFTProblem mdp("mddft");
+  NTTProblem ntt("ntt");
   for(int i = 0; i < iter; i++){
-    double *Y, *X, *sym;
-    X = new double[n*m*k*2];
-    Y = new double[n*m*k*2];
-    sym = new double[n*m*k*2];
-    for(int ii = 0; ii < n*m*k*2; ii++) {
+    uint32_t *Y, *X, *sym;
+    X = new uint32_t[n*m];
+    Y = new uint32_t[n*m];
+    sym = new uint32_t[n*m];
+    for(int ii = 0; ii < n*m; ii++) {
       X[ii] = 1.0;
     }
     args.push_back(Y);
     args.push_back(X);
     args.push_back(sym);
-    mdp.setArgs(args);
-    mdp.setSizes(sizes);
-    mdp.readKernels();
-    mdp.createGraph();
-    mdp.transform();
+    ntt.setArgs(args);
+    ntt.setSizes(sizes);
+    ntt.readKernels();
+    ntt.createGraph();
+    ntt.transform();
 
     if(std::stoi(argv[1]) == 1){
       std::string filePath =  getIRISX() + "/kernel.cu";

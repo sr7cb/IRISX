@@ -98,6 +98,10 @@ class Executor {
             pointer_int,
             pointer_float,
             pointer_double,
+            pointer_uint64_t,
+            pointer_uint32_t,
+            pointer_uint16_t,
+            pointer_uint8_t,
             mone
         };
         /*Configuration Variables*/

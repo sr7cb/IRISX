@@ -8,6 +8,12 @@ CFLAGS=-pg
 
 all: proto_ipdps
 
+kswitch:
+	g++ -DPRINTDEBUG -ggdb -I$(IRIS_PATH)/include -I. -Wunused-result $(CFLAGS) -o kswitch testkswitch.cpp $(LDFLAGS)
+
+test_ntt:
+		g++ -DPRINTDEBUG -ggdb -I$(IRIS_PATH)/include -I. -Wunused-result $(CFLAGS) -o nttest test_multi_kernel_ntt.cpp $(LDFLAGS)
+
 test_different_kernels:
 		g++ -DPRINTDEBUG -ggdb -I$(IRIS_PATH)/include -I. -Wunused-result $(CFLAGS) -o tdkernels test_multi_kernel.cpp $(LDFLAGS)
 
